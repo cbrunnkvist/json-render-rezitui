@@ -1,0 +1,70 @@
+{
+  "name": "@cbrunnkvist/json-render-rezitui",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "description": "Rezi UI renderer for @json-render.core. Renders JSON to Rezi UI components.",
+  "keywords": [
+    "json",
+    "ui",
+    "rezi",
+    "ai",
+    "generative-ui",
+    "llm",
+    "renderer",
+    "streaming",
+    "components"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cbrunnkvist/json-render-rezitui.git",
+    "directory": "packages/json-render-rezitui"
+  },
+  "homepage": "https://github.com/cbrunnkvist/json-render-rezitui#readme",
+  "bugs": {
+    "url": "https://github.com/cbrunnkvist/json-render-rezitui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.mjs",
+      "require": "./dist/schema.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@json-render/core": "workspace:*",
+    "@json-render/react": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "@rezi-ui/core": "^0.1.0-alpha.34",
+    "@rezi-ui/node": "^0.1.0-alpha.34"
+  },
+  "devDependencies": {
+    "@rezi-ui/core": "^0.1.0-alpha.34",
+    "@rezi-ui/node": "^0.1.0-alpha.34",
+    "@types/node": "^25.3.1",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5",
+    "vitest": "^2.0.0"
+  }
+}
