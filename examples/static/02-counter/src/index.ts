@@ -1,0 +1,202 @@
+/**
+ * Counter Example
+ * 
+ * Demonstrates interactive state management with json-render-rezitui.
+ * Shows how actions modify state and trigger re-renders.
+ */
+
+import { createReziApp } from "json-render-rezitui";
+
+// Define the spec with state and actions
+const spec = {
+  catalog: "core",
+  state: {
+    count: 0,
+    step: 1
+  },
+  elements: [
+    {
+      key: "header",
+      type: "Box",
+      props: {
+        padding: 1,
+        border: "double"
+      },
+      children: [
+        {
+          key: "title",
+          type: "Text",
+          props: {
+            content: "🧮 Interactive Counter",
+            bold: true,
+            color: "cyan",
+            align: "center"
+          }
+        }
+      ]
+    },
+    {
+      key: "counter-display",
+      type: "Box",
+      props: {
+        padding: 2,
+        margin: 1
+      },
+      children: [
+        {
+          key: "count-text",
+          type: "Text",
+          props: {
+            content: { $state: "/count" },
+            bold: true,
+            color: { $cond: { $state: "/count", gt: 0, then: "green", else: { $cond: { $state: "/count", lt: 0, then: "red", else: "white" } } } },
+            align: "center"
+          }
+        },
+        {
+          key: "count-label",
+          type: "Text",
+          props: {
+            content: "Current Count",
+            color: "gray",
+            align: "center"
+          }
+        }
+      ]
+    },
+    {
+      key: "controls",
+      type: "Row",
+      props: {
+        gap: 2,
+        justifyContent: "center",
+        padding: 1
+      },
+      children: [
+        {
+          key: "decrement-btn",
+          type: "Button",
+          props: {
+            id: "decrement-btn",
+            label: "➖ Decrement"
+          },
+          on: {
+            press: {
+              action: "setState",
+              params: {
+                path: "/count",
+                value: { $template: "${count - step}" }
+              }
+            }
+          }
+        },
+        {
+          key: "reset-btn",
+          type: "Button",
+          props: {
+            id: "reset-btn",
+            label: "🔄 Reset",
+            intent: "secondary"
+          },
+          on: {
+            press: {
+              action: "setState",
+              params: {
+                path: "/count",
+                value: 0
+              }
+            }
+          }
+        },
+        {
+          key: "increment-btn",
+          type: "Button",
+          props: {
+            id: "increment-btn",
+            label: "➕ Increment"
+          },
+          on: {
+            press: {
+              action: "setState",
+              params: {
+                path: "/count",
+                value: { $template: "${count + step}" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      key: "step-control",
+      type: "Row",
+      props: {
+        gap: 1,
+        padding: 1,
+        justifyContent: "center"
+      },
+      children: [
+        {
+          key: "step-label",
+          type: "Text",
+          props: {
+            content: "Step size:"
+          }
+        },
+        {
+          key: "step-input",
+          type: "Input",
+          props: {
+            id: "step-input",
+            type: "number",
+            value: { $state: "/step" },
+            bindings: {
+              value: "/step"
+            }
+          }
+        }
+      ]
+    },
+    {
+      key: "info",
+      type: "Box",
+      props: {
+        padding: 1,
+        marginTop: 2
+      },
+      children: [
+        {
+          key: "info-text",
+          type: "Text",
+          props: {
+            content: "💡 Try changing the step size and clicking the buttons!",
+            color: "dim"
+          }
+        }
+      ]
+    }
+  ]
+};
+
+async function main() {
+  console.log("Starting Counter example...\n");
+
+  const app = createReziApp({
+    spec,
+    debug: false
+  });
+
+  // Log state changes for demonstration
+  const originalSetState = app.renderer.setState.bind(app.renderer);
+  app.renderer.setState = (path, value) => {
+    console.log(`[State Change] ${path} = ${JSON.stringify(value)}`);
+    return originalSetState(path, value);
+  };
+
+  await app.run();
+}
+
+main().catch((err) => {
+  console.error("Error:", err);
+  process.exit(1);
+});
