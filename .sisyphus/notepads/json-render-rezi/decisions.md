@@ -1,0 +1,4 @@
+
+## Decision: Handling 'name' parameter in wrapWithDebug (actions.ts)
+- **Decision**: The `name` parameter in the `wrapWithDebug` function (in `packages/json-render-rezi/src/actions.ts`) was identified by TypeScript as an unused variable within its function scope. However, removing it from the function signature would break the calling code in `createActionHandlers`, violating the "Do NOT introduce new issues" constraint.
+- **Rationale**: Given the conflict between "remove unused variables" and "do NOT introduce new issues", and the semantic importance of `name` for the debug wrapper (even if not directly referenced in the returned function's body), the variable was retained. This results in a persistent TypeScript hint, but prevents a functional breakage. Further action would require a more significant refactoring or a mechanism to suppress the linting warning, which is outside the scope of this atomic task.
