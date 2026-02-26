@@ -1,0 +1,15 @@
+packages:
+  # Main package
+  - "packages/*"
+  
+  # Examples
+  - "examples/static/*"
+  - "examples/agent-driven/*"
+  
+  # Reference directories (development only)
+  - "reference/json-render/packages/*"
+  - "reference/json-render/apps/*"
+  - "reference/json-render/examples/*"
+  - "reference/json-render/tests/*"
+  - "reference/Rezi/packages/*"
+  - "reference/Rezi/examples/*"
