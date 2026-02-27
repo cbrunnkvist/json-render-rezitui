@@ -56,7 +56,7 @@ function formatUptime(seconds: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-function createSpec(stats: ReturnType<typeof getSystemStats>) {
+function createSpec(platform: string, stats: ReturnType<typeof getSystemStats>) {
   return {
     root: "main",
     elements: {
@@ -202,6 +202,14 @@ function createSpec(stats: ReturnType<typeof getSystemStats>) {
           align: "center"
         }
       }
+    },
+    state: {
+      platform,
+      cpu: stats.cpu,
+      memory: stats.memory,
+      uptime: formatUptime(stats.uptime),
+      processes: stats.processes,
+      refreshRate: 1000
     }
   };
 }
@@ -210,12 +218,13 @@ async function main() {
   console.log("Starting System Dashboard...\n");
   console.log("Press Ctrl+C to exit\n");
 
+  const platform = os.platform();
   const initialStats = getSystemStats();
   
   const app = createReziApp({
-    spec: createSpec(initialStats),
+    spec: createSpec(platform, initialStats),
     initialState: {
-      platform: os.platform(),
+      platform,
       ...initialStats
     }
   });
