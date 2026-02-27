@@ -1,9 +1,9 @@
 {
-  "active_plan": "/Users/conny/Developer/tui/.sisyphus/plans/json-render-rezi.md",
-  "started_at": "2026-02-26T07:49:43.261Z",
+  "active_plan": "/Users/conny/Developer/tui/json-render-rezitui/.sisyphus/plans/renderer-fix.md",
+  "started_at": "2026-02-27T08:08:55.165Z",
   "session_ids": [
-    "ses_36728fe86ffeHhc1Xu0nYOzuNd"
+    "ses_36200649effeuP1bPdHso0EsBb"
   ],
-  "plan_name": "json-render-rezi",
+  "plan_name": "renderer-fix",
   "agent": "atlas"
 }
