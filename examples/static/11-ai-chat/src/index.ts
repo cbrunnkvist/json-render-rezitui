@@ -86,8 +86,7 @@ const initialSpec: Spec = {
     inputValue: "",
     isStreaming: false
   }
-};
-};
+
 
 
 // Simulated AI response generator
