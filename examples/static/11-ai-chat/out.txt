@@ -1,0 +1,14 @@
+
+> @cbrunnkvist/json-render-rezitui-example-ai-chat@1.0.0 start /Users/conny/Developer/tui/json-render-rezitui/examples/static/11-ai-chat
+> tsx src/index.ts
+
+Starting AI Chat example...
+
+This demonstrates SpecStream progressive rendering.
+
+Error: ZrUiError: backend.start rejected: ZrUiError: worker fatal: engineCreate (-6): engine_create failed
+    at <anonymous> (/Users/conny/Developer/tui/json-render-rezitui/node_modules/.pnpm/@rezi-ui+core@0.1.0-alpha.34/node_modules/@rezi-ui/core/src/app/createApp.ts:1784:17)
+    at async main (/Users/conny/Developer/tui/json-render-rezitui/examples/static/11-ai-chat/src/index.ts:162:3) {
+  code: 'ZRUI_BACKEND_ERROR'
+}
+ ELIFECYCLE  Command failed with exit code 1.

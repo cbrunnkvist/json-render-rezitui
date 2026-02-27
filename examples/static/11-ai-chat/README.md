@@ -14,8 +14,8 @@ Real-time chat interface demonstrating SpecStream progressive rendering.
 ## Running
 
 ```bash
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 ## How It Works

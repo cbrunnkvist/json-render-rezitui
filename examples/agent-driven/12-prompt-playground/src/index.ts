@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { createReziApp, createStreamingRenderer } from "json-render-rezitui";
+import { createReziApp, createStreamingRenderer } from "@cbrunnkvist/json-render-rezitui";
 import type { Spec } from "@json-render/core";
 
 // 1. Environment Validation

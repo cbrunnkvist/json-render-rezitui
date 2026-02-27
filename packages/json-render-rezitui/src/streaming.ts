@@ -158,7 +158,7 @@ function validatePartialSpec(spec: Spec): { isValid: boolean; errors: string[] }
  *
  * @example
  * ```ts
- * import { createStreamingRenderer, defaultComponents } from "json-render-rezitui";
+ * import { createStreamingRenderer, defaultComponents } from "@cbrunnkvist/json-render-rezitui";
  * import { createNodeApp } from "@rezi-ui/node";
  *
  * const app = createNodeApp({ initialState: {} });
@@ -383,7 +383,7 @@ export async function processStream(
  * @example
  * ```ts
  * import { createNodeApp } from "@rezi-ui/node";
- * import { createAppStreamingRenderer, defaultComponents } from "json-render-rezitui";
+ * import { createAppStreamingRenderer, defaultComponents } from "@cbrunnkvist/json-render-rezitui";
  *
  * const app = createNodeApp({ initialState: {} });
  * const streaming = createAppStreamingRenderer(app, {

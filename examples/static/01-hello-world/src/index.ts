@@ -5,7 +5,7 @@
  * Demonstrates basic spec rendering without state or interactivity.
  */
 
-import { createReziApp } from "json-render-rezitui";
+import { createReziApp } from "@cbrunnkvist/json-render-rezitui";
 
 // Define a simple static spec
 const spec = {

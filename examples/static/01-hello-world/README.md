@@ -13,8 +13,8 @@ The simplest possible `@cbrunnkvist/json-render-rezitui` application.
 ## Running
 
 ```bash
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 ## The Spec

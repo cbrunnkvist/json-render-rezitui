@@ -1,0 +1,8 @@
+
+> @cbrunnkvist/json-render-rezitui-example-system-dashboard@1.0.0 start /Users/conny/Developer/tui/json-render-rezitui/examples/static/05-system-dashboard
+> tsx src/index.ts
+
+Starting System Dashboard...
+
+Press Ctrl+C to exit
+

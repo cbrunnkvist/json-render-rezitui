@@ -158,7 +158,7 @@ export interface ReziApp<S extends StateModel = StateModel> extends NodeApp<S> {
  *
  * @example
  * ```ts
- * import { createReziApp, defaultComponents } from "json-render-rezitui";
+ * import { createReziApp, defaultComponents } from "@cbrunnkvist/json-render-rezitui";
  *
  * // Create app with initial state
  * const app = createReziApp({
@@ -349,7 +349,7 @@ export interface CreateStreamingReziAppOptions<S extends StateModel = StateModel
  *
  * @example
  * ```ts
- * import { createStreamingReziApp, defaultComponents } from "json-render-rezitui";
+ * import { createStreamingReziApp, defaultComponents } from "@cbrunnkvist/json-render-rezitui";
  *
  * const app = createStreamingReziApp({
  *   initialState: {},

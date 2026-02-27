@@ -7,7 +7,7 @@ Render JSON specs to terminal UI using [Rezi](https://rezitui.dev). Built on top
 A renderer that turns JSON UI specifications into interactive terminal applications. Define your UI as JSON, render it as a TUI.
 
 ```typescript
-import { createReziApp } from "json-render-rezitui";
+import { createReziApp } from "@cbrunnkvist/json-render-rezitui";
 
 const app = createReziApp({
   spec: {

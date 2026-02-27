@@ -51,7 +51,7 @@ export const catalog = defineCatalog(schema, {
 ### 2. Define Component Implementations
 
 ```typescript
-import { defineReziRegistry } from "json-render-rezitui";
+import { defineReziRegistry } from "@cbrunnkvist/json-render-rezitui";
 import { ui } from "@rezi-ui/core";
 import { catalog } from "./catalog";
 
@@ -86,7 +86,7 @@ export const { registry } = defineReziRegistry(catalog, {
 ### 3. Render Specs
 
 ```typescript
-import { createReziApp } from "json-render-rezitui";
+import { createReziApp } from "@cbrunnkvist/json-render-rezitui";
 import { registry } from "./registry";
 
 const app = createReziApp({
@@ -204,7 +204,7 @@ Built-in actions:
 Stream specs from an API:
 
 ```typescript
-import { SpecStream } from "json-render-rezitui";
+import { SpecStream } from "@cbrunnkvist/json-render-rezitui";
 
 const stream = new SpecStream({
   url: "/api/chat",

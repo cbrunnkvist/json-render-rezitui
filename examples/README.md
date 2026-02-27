@@ -32,8 +32,8 @@ Real-time dashboards with metrics and charts.
 
 ```bash
 cd examples/[category]/[name]
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 Each example folder has a small README explaining its use case and how to operate it.

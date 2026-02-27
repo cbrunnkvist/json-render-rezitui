@@ -5,7 +5,7 @@
  * Shows how actions modify state and trigger re-renders.
  */
 
-import { createReziApp } from "json-render-rezitui";
+import { createReziApp } from "@cbrunnkvist/json-render-rezitui";
 
 // Define the spec with state and actions
 const spec = {

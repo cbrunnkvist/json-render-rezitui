@@ -14,8 +14,8 @@ Real-time system monitoring dashboard with CPU, memory, and process metrics.
 ## Running
 
 ```bash
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 ## Features

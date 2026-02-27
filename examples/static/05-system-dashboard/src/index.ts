@@ -5,7 +5,7 @@
  * and process information with live updates.
  */
 
-import { createReziApp } from "json-render-rezitui";
+import { createReziApp } from "@cbrunnkvist/json-render-rezitui";
 import { execSync } from "child_process";
 import os from "os";
 

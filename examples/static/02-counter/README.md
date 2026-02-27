@@ -14,8 +14,8 @@ Interactive counter demonstrating state management and actions.
 ## Running
 
 ```bash
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 ## Key Concepts

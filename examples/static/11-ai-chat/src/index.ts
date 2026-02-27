@@ -6,7 +6,7 @@
  * streams content.
  */
 
-import { createReziApp, createStreamingRenderer } from "json-render-rezitui";
+import { createReziApp, createStreamingRenderer } from "@cbrunnkvist/json-render-rezitui";
 import type { Spec } from "@json-render/core";
 
 // Initial chat UI spec

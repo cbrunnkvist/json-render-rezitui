@@ -57,10 +57,10 @@ Complete list of example applications demonstrating various features.
 cd examples/01-hello-world
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run the example
-npm start
+pnpm start
 ```
 
 ## Creating New Examples
@@ -108,7 +108,7 @@ EOF
 # Create main file
 mkdir -p src
 cat > src/index.ts << 'EOF'
-import { createReziApp } from "json-render-rezitui";
+import { createReziApp } from "@cbrunnkvist/json-render-rezitui";
 
 const spec = {
   catalog: "core",
@@ -134,8 +134,8 @@ Description of what this example demonstrates.
 ## Running
 
 \`\`\`bash
-npm install
-npm start
+pnpm install
+pnpm start
 \`\`\`
 EOF
 ```
