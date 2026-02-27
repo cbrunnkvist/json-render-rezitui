@@ -78,7 +78,15 @@ const initialSpec: Spec = {
         }
       }
     }
+  },
+  state: {
+    messages: [
+      { role: "system", content: "Welcome! I'm an AI assistant. Type a message to begin." }
+    ],
+    inputValue: "",
+    isStreaming: false
   }
+};
 };
 
 
