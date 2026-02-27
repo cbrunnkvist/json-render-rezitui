@@ -157,8 +157,13 @@ const spec = {
         color: "dim"
       }
     }
+  },
+  state: {
+    count: 0,
+    step: 1
   }
 };
+
 
 async function main() {
   console.log("Starting Counter example...\n");
