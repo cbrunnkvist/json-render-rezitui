@@ -221,11 +221,13 @@ async function main() {
   const platform = os.platform();
   const initialStats = getSystemStats();
   
-  const app = createReziApp({
     spec: createSpec(platform, initialStats),
     initialState: {
       platform,
       ...initialStats
+    },
+    config: {
+      executionMode: "inline"
     }
   });
 

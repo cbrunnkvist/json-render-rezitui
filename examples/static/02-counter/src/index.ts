@@ -171,6 +171,9 @@ async function main() {
   const app = createReziApp({
     spec,
     initialState: { count: 0, step: 1 },
+    config: {
+      executionMode: "inline"
+    },
     debug: false
   });
 

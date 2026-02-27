@@ -161,7 +161,9 @@ async function main() {
         } finally {
           ctx.store.update({ isStreaming: false });
         }
-      }
+    },
+    config: {
+      executionMode: "inline"
     }
   });
 
