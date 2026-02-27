@@ -11,37 +11,31 @@ import type { Spec } from "@json-render/core";
 
 // Initial chat UI spec
 const initialSpec: Spec = {
-  catalog: "core",
-  state: {
-    messages: [
-      { role: "system", content: "Welcome! I'm an AI assistant. Type a message to begin." }
-    ],
-    inputValue: "",
-    isStreaming: false
-  },
-  elements: [
-    {
-      key: "header",
+  root: "main",
+  elements: {
+    main: {
+      type: "Column",
+      props: {},
+      children: ["header", "messages", "input-section"]
+    },
+    header: {
       type: "Box",
       props: {
         padding: 1,
         border: "single"
       },
-      children: [
-        {
-          key: "title",
-          type: "Text",
-          props: {
-            content: "🤖 AI Chat Assistant",
-            bold: true,
-            color: "cyan",
-            align: "center"
-          }
-        }
-      ]
+      children: ["title"]
     },
-    {
-      key: "messages",
+    title: {
+      type: "Text",
+      props: {
+        content: "🤖 AI Chat Assistant",
+        bold: true,
+        color: "cyan",
+        align: "center"
+      }
+    },
+    messages: {
       type: "VirtualList",
       props: {
         id: "messages-list",
@@ -50,46 +44,43 @@ const initialSpec: Spec = {
         maxHeight: 15
       }
     },
-    {
-      key: "input-section",
+    "input-section": {
       type: "Row",
       props: {
         gap: 1,
         padding: 1,
         border: "top"
       },
-      children: [
-        {
-          key: "input",
-          type: "Input",
-          props: {
-            id: "chat-input",
-            placeholder: "Type your message...",
-            value: { $state: "/inputValue" },
-            bindings: {
-              value: "/inputValue"
-            },
-            disabled: { $state: "/isStreaming" }
-          }
+      children: ["input", "send-btn"]
+    },
+    input: {
+      type: "Input",
+      props: {
+        id: "chat-input",
+        placeholder: "Type your message...",
+        value: { $state: "/inputValue" },
+        bindings: {
+          value: "/inputValue"
         },
-        {
-          key: "send-btn",
-          type: "Button",
-          props: {
-            id: "send-btn",
-            label: { $cond: { $state: "/isStreaming", then: "⏳ Thinking...", else: "📤 Send" } },
-            disabled: { $state: "/isStreaming" }
-          },
-          on: {
-            press: {
-              action: "sendMessage"
-            }
-          }
+        disabled: { $state: "/isStreaming" }
+      }
+    },
+    "send-btn": {
+      type: "Button",
+      props: {
+        id: "send-btn",
+        label: { $cond: { $state: "/isStreaming", then: "⏳ Thinking...", else: "📤 Send" } },
+        disabled: { $state: "/isStreaming" }
+      },
+      on: {
+        press: {
+          action: "sendMessage"
         }
-      ]
+      }
     }
-  ]
+  }
 };
+
 
 // Simulated AI response generator
 async function* simulateAIResponse(userMessage: string): AsyncGenerator<string> {
@@ -116,6 +107,13 @@ async function main() {
 
   const app = createReziApp({
     spec: initialSpec,
+    initialState: {
+      messages: [
+        { role: "system", content: "Welcome! I'm an AI assistant. Type a message to begin." }
+      ],
+      inputValue: "",
+      isStreaming: false
+    },
     customActions: {
       sendMessage: async (_params, ctx) => {
         const input = ctx.store.getState().inputValue as string;
