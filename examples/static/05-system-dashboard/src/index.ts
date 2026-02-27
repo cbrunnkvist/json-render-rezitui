@@ -58,144 +58,122 @@ function formatUptime(seconds: number): string {
 
 function createSpec(stats: ReturnType<typeof getSystemStats>) {
   return {
-    catalog: "core",
-    state: {
-      cpu: stats.cpu,
-      memory: stats.memory,
-      uptime: formatUptime(stats.uptime),
-      processes: stats.processes,
-      refreshRate: 1000
-    },
-    elements: [
-      {
-        key: "header",
+    root: "main",
+    elements: {
+      main: {
+        type: "Column",
+        props: {},
+        children: ["header", "metrics", "processes-header", "processes-table", "footer"]
+      },
+      header: {
         type: "Box",
         props: {
           padding: 1,
           border: "double"
         },
-        children: [
-          {
-            key: "title",
-            type: "Text",
-            props: {
-              content: "🖥️  System Dashboard",
-              bold: true,
-              color: "cyan",
-              align: "center"
-            }
-          },
-          {
-            key: "subtitle",
-            type: "Text",
-            props: {
-              content: { $template: "Platform: ${platform} | Uptime: ${uptime}" },
-              color: "gray",
-              align: "center"
-            }
-          }
-        ]
+        children: ["title", "subtitle"]
       },
-      {
-        key: "metrics",
+      title: {
+        type: "Text",
+        props: {
+          content: "🖥️  System Dashboard",
+          bold: true,
+          color: "cyan",
+          align: "center"
+        }
+      },
+      subtitle: {
+        type: "Text",
+        props: {
+          content: { $template: "Platform: ${platform} | Uptime: ${uptime}" },
+          color: "gray",
+          align: "center"
+        }
+      },
+      metrics: {
         type: "Row",
         props: {
           gap: 2,
           padding: 1
         },
-        children: [
-          {
-            key: "cpu-metric",
-            type: "Box",
-            props: {
-              padding: 1,
-              border: "single",
-              minWidth: 20
-            },
-            children: [
-              {
-                key: "cpu-label",
-                type: "Text",
-                props: {
-                  content: "CPU Usage",
-                  color: "gray"
-                }
-              },
-              {
-                key: "cpu-value",
-                type: "Text",
-                props: {
-                  content: { $template: "${cpu}%" },
-                  bold: true,
-                  color: { $cond: { $state: "/cpu", gt: 80, then: "red", else: { $cond: { $state: "/cpu", gt: 50, then: "yellow", else: "green" } } } }
-                }
-              },
-              {
-                key: "cpu-bar",
-                type: "Text",
-                props: {
-                  content: { $template: "[${'#'.repeat(Math.round(cpu/5))}${'-'.repeat(20-Math.round(cpu/5))}]" }
-                }
-              }
-            ]
-          },
-          {
-            key: "mem-metric",
-            type: "Box",
-            props: {
-              padding: 1,
-              border: "single",
-              minWidth: 20
-            },
-            children: [
-              {
-                key: "mem-label",
-                type: "Text",
-                props: {
-                  content: "Memory",
-                  color: "gray"
-                }
-              },
-              {
-                key: "mem-value",
-                type: "Text",
-                props: {
-                  content: { $template: "${memory.used}GB / ${memory.total}GB" },
-                  bold: true,
-                  color: { $cond: { $state: "/memory/percent", gt: 80, then: "red", else: { $cond: { $state: "/memory/percent", gt: 60, then: "yellow", else: "green" } } } }
-                }
-              },
-              {
-                key: "mem-bar",
-                type: "Text",
-                props: {
-                  content: { $template: "[${'#'.repeat(Math.round(memory.percent/5))}${'-'.repeat(20-Math.round(memory.percent/5))}]" }
-                }
-              }
-            ]
-          }
-        ]
+        children: ["cpu-metric", "mem-metric"]
       },
-      {
-        key: "processes-header",
+      "cpu-metric": {
+        type: "Box",
+        props: {
+          padding: 1,
+          border: "single",
+          minWidth: 20
+        },
+        children: ["cpu-label", "cpu-value", "cpu-bar"]
+      },
+      "cpu-label": {
+        type: "Text",
+        props: {
+          content: "CPU Usage",
+          color: "gray"
+        }
+      },
+      "cpu-value": {
+        type: "Text",
+        props: {
+          content: { $template: "${cpu}%" },
+          bold: true,
+          color: { $cond: { $state: "/cpu", gt: 80, then: "red", else: { $cond: { $state: "/cpu", gt: 50, then: "yellow", else: "green" } } } }
+        }
+      },
+      "cpu-bar": {
+        type: "Text",
+        props: {
+          content: { $template: "[${'#'.repeat(Math.round(cpu/5))}${'-'.repeat(20-Math.round(cpu/5))}]" }
+        }
+      },
+      "mem-metric": {
+        type: "Box",
+        props: {
+          padding: 1,
+          border: "single",
+          minWidth: 20
+        },
+        children: ["mem-label", "mem-value", "mem-bar"]
+      },
+      "mem-label": {
+        type: "Text",
+        props: {
+          content: "Memory",
+          color: "gray"
+        }
+      },
+      "mem-value": {
+        type: "Text",
+        props: {
+          content: { $template: "${memory.used}GB / ${memory.total}GB" },
+          bold: true,
+          color: { $cond: { $state: "/memory/percent", gt: 80, then: "red", else: { $cond: { $state: "/memory/percent", gt: 60, then: "yellow", else: "green" } } } }
+        }
+      },
+      "mem-bar": {
+        type: "Text",
+        props: {
+          content: { $template: "[${'#'.repeat(Math.round(memory.percent/5))}${'-'.repeat(20-Math.round(memory.percent/5))}]" }
+        }
+      },
+      "processes-header": {
         type: "Box",
         props: {
           padding: 1,
           border: "bottom"
         },
-        children: [
-          {
-            key: "processes-title",
-            type: "Text",
-            props: {
-              content: "🔝 Top Processes",
-              bold: true
-            }
-          }
-        ]
+        children: ["processes-title"]
       },
-      {
-        key: "processes-table",
+      "processes-title": {
+        type: "Text",
+        props: {
+          content: "🔝 Top Processes",
+          bold: true
+        }
+      },
+      "processes-table": {
         type: "Table",
         props: {
           id: "processes-table",
@@ -208,26 +186,23 @@ function createSpec(stats: ReturnType<typeof getSystemStats>) {
           rows: { $state: "/processes" }
         }
       },
-      {
-        key: "footer",
+      footer: {
         type: "Box",
         props: {
           padding: 1,
           border: "top"
         },
-        children: [
-          {
-            key: "refresh-info",
-            type: "Text",
-            props: {
-              content: { $template: "⏱️  Refreshing every ${refreshRate}ms | Press Ctrl+C to exit" },
-              color: "dim",
-              align: "center"
-            }
-          }
-        ]
+        children: ["refresh-info"]
+      },
+      "refresh-info": {
+        type: "Text",
+        props: {
+          content: { $template: "⏱️  Refreshing every ${refreshRate}ms | Press Ctrl+C to exit" },
+          color: "dim",
+          align: "center"
+        }
       }
-    ]
+    }
   };
 }
 
