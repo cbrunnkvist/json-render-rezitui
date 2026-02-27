@@ -229,6 +229,10 @@ async function main() {
     },
     config: {
       executionMode: "inline"
+    },
+    debug: true
+  });
+      executionMode: "inline"
     }
   });
 
