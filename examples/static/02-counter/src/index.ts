@@ -9,173 +9,155 @@ import { createReziApp } from "@cbrunnkvist/json-render-rezitui";
 
 // Define the spec with state and actions
 const spec = {
-  catalog: "core",
-  state: {
-    count: 0,
-    step: 1
-  },
-  elements: [
-    {
-      key: "header",
+  root: "main",
+  elements: {
+    main: {
+      type: "Column",
+      props: {},
+      children: ["header", "counter-display", "controls", "step-control", "info"]
+    },
+    header: {
       type: "Box",
       props: {
         padding: 1,
         border: "double"
       },
-      children: [
-        {
-          key: "title",
-          type: "Text",
-          props: {
-            content: "🧮 Interactive Counter",
-            bold: true,
-            color: "cyan",
-            align: "center"
-          }
-        }
-      ]
+      children: ["title"]
     },
-    {
-      key: "counter-display",
+    title: {
+      type: "Text",
+      props: {
+        content: "🧮 Interactive Counter",
+        bold: true,
+        color: "cyan",
+        align: "center"
+      }
+    },
+    "counter-display": {
       type: "Box",
       props: {
         padding: 2,
         margin: 1
       },
-      children: [
-        {
-          key: "count-text",
-          type: "Text",
-          props: {
-            content: { $state: "/count" },
-            bold: true,
-            color: { $cond: { $state: "/count", gt: 0, then: "green", else: { $cond: { $state: "/count", lt: 0, then: "red", else: "white" } } } },
-            align: "center"
-          }
-        },
-        {
-          key: "count-label",
-          type: "Text",
-          props: {
-            content: "Current Count",
-            color: "gray",
-            align: "center"
-          }
-        }
-      ]
+      children: ["count-text", "count-label"]
     },
-    {
-      key: "controls",
+    "count-text": {
+      type: "Text",
+      props: {
+        content: { $state: "/count" },
+        bold: true,
+        color: { $cond: { $state: "/count", gt: 0, then: "green", else: { $cond: { $state: "/count", lt: 0, then: "red", else: "white" } } } },
+        align: "center"
+      }
+    },
+    "count-label": {
+      type: "Text",
+      props: {
+        content: "Current Count",
+        color: "gray",
+        align: "center"
+      }
+    },
+    controls: {
       type: "Row",
       props: {
         gap: 2,
         justifyContent: "center",
         padding: 1
       },
-      children: [
-        {
-          key: "decrement-btn",
-          type: "Button",
-          props: {
-            id: "decrement-btn",
-            label: "➖ Decrement"
-          },
-          on: {
-            press: {
-              action: "setState",
-              params: {
-                path: "/count",
-                value: { $template: "${count - step}" }
-              }
-            }
-          }
-        },
-        {
-          key: "reset-btn",
-          type: "Button",
-          props: {
-            id: "reset-btn",
-            label: "🔄 Reset",
-            intent: "secondary"
-          },
-          on: {
-            press: {
-              action: "setState",
-              params: {
-                path: "/count",
-                value: 0
-              }
-            }
-          }
-        },
-        {
-          key: "increment-btn",
-          type: "Button",
-          props: {
-            id: "increment-btn",
-            label: "➕ Increment"
-          },
-          on: {
-            press: {
-              action: "setState",
-              params: {
-                path: "/count",
-                value: { $template: "${count + step}" }
-              }
-            }
+      children: ["decrement-btn", "reset-btn", "increment-btn"]
+    },
+    "decrement-btn": {
+      type: "Button",
+      props: {
+        id: "decrement-btn",
+        label: "➖ Decrement"
+      },
+      on: {
+        press: {
+          action: "setState",
+          params: {
+            path: "/count",
+            value: { $template: "${count - step}" }
           }
         }
-      ]
+      }
     },
-    {
-      key: "step-control",
+    "reset-btn": {
+      type: "Button",
+      props: {
+        id: "reset-btn",
+        label: "🔄 Reset",
+        intent: "secondary"
+      },
+      on: {
+        press: {
+          action: "setState",
+          params: {
+            path: "/count",
+            value: 0
+          }
+        }
+      }
+    },
+    "increment-btn": {
+      type: "Button",
+      props: {
+        id: "increment-btn",
+        label: "➕ Increment"
+      },
+      on: {
+        press: {
+          action: "setState",
+          params: {
+            path: "/count",
+            value: { $template: "${count + step}" }
+          }
+        }
+      }
+    },
+    "step-control": {
       type: "Row",
       props: {
         gap: 1,
         padding: 1,
         justifyContent: "center"
       },
-      children: [
-        {
-          key: "step-label",
-          type: "Text",
-          props: {
-            content: "Step size:"
-          }
-        },
-        {
-          key: "step-input",
-          type: "Input",
-          props: {
-            id: "step-input",
-            type: "number",
-            value: { $state: "/step" },
-            bindings: {
-              value: "/step"
-            }
-          }
-        }
-      ]
+      children: ["step-label", "step-input"]
     },
-    {
-      key: "info",
+    "step-label": {
+      type: "Text",
+      props: {
+        content: "Step size:"
+      }
+    },
+    "step-input": {
+      type: "Input",
+      props: {
+        id: "step-input",
+        type: "number",
+        value: { $state: "/step" },
+        bindings: {
+          value: "/step"
+        }
+      }
+    },
+    info: {
       type: "Box",
       props: {
         padding: 1,
         marginTop: 2
       },
-      children: [
-        {
-          key: "info-text",
-          type: "Text",
-          props: {
-            content: "💡 Try changing the step size and clicking the buttons!",
-            color: "dim"
-          }
-        }
-      ]
+      children: ["info-text"]
+    },
+    "info-text": {
+      type: "Text",
+      props: {
+        content: "💡 Try changing the step size and clicking the buttons!",
+        color: "dim"
+      }
     }
-  ]
+  }
 };
 
 async function main() {
@@ -183,6 +165,7 @@ async function main() {
 
   const app = createReziApp({
     spec,
+    initialState: { count: 0, step: 1 },
     debug: false
   });
 
