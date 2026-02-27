@@ -232,9 +232,6 @@ async function main() {
     },
     debug: true
   });
-      executionMode: "inline"
-    }
-  });
 
   // Update stats every second
   const interval = setInterval(() => {
