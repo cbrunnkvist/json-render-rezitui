@@ -172,7 +172,7 @@ const initialSpec: Spec = {
       props: {
         id: "playground-cancel-btn",
         label: "❌ Cancel",
-        disabled: { $not: { $state: "/isStreaming" } },
+        disabled: { $cond: { $not: { $state: "/isStreaming" } }, $then: true, $else: false },
       },
       on: { press: { action: "cancel" } },
     },

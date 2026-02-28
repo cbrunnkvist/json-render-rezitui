@@ -57,3 +57,18 @@ Commands should generally be run from the root or targeting the specific package
 - **Visibility & Props:** Implements a resolution system for evaluating visibility conditions and property expressions ($state, $item, etc.).
 - **Testing:** New features or bug fixes should include tests in `packages/json-render-rezitui/src/__tests__/`. Use existing integration tests as a template.
 - **ESM First:** The project uses ESM (`.js` extensions in imports, `"type": "module"` in sub-packages).
+
+## Debugging
+
+When building terminal UIs with Rezi, app crashes often fail silently (the screen might just hang blank or unexpectedly exit without a stack trace) because they take over stdout/stderr. If an example or the library hangs:
+
+1. **Enable the Rezi Logger:** Run your command with `DEBUG=true` to force Rezi to write raw, unformatted logs to a text file instead of stdout.
+   ```bash
+   DEBUG=true pnpm start
+   ```
+2. **Redirect STDERR:** To ensure Node-level errors (like module resolution issues or unhandled promise rejections) aren't swallowed by Rezi's terminal buffer loop, pipe stderr to an external log file:
+   ```bash
+   DEBUG=true pnpm start 2> error.log
+   ```
+3. **Check Output:** Open `debug.log` (created by the internal logger) and `error.log` in your editor to trace exactly what component property or framework module threw before the hang.
+4. **Isolate Runner:** If `tsx` or `ts-node` is swallowing output, write an isolated `.js` file and run it natively via `node --no-warnings --loader tsx filename.ts` to inspect how V8 exits.

@@ -12,4 +12,6 @@ packages:
   - "reference/json-render/examples/*"
   - "reference/json-render/tests/*"
   - "reference/Rezi/packages/*"
+  - "!reference/Rezi/packages/bench-runner"
+  - "!reference/Rezi/packages/bench-app"
   - "reference/Rezi/examples/*"
