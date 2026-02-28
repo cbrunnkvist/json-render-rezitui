@@ -4,10 +4,16 @@
  * Demonstrates SpecStream integration for progressive rendering
  * of AI-generated responses. Shows real-time UI updates as AI
  * streams content.
+ * 
+ * Uses message windowing and a flat single-Text-per-message layout
+ * to work around Rezi's Column layout constraints.
  */
 
 import { createReziApp, createStreamingRenderer } from "@cbrunnkvist/json-render-rezitui";
 import type { Spec } from "@json-render/core";
+
+/** Maximum number of messages to display at once */
+const MAX_VISIBLE_MESSAGES = 5;
 
 // Initial chat UI spec
 const initialSpec: Spec = {
@@ -36,12 +42,22 @@ const initialSpec: Spec = {
       }
     },
     messages: {
-      type: "VirtualList",
+      type: "Column",
       props: {
         id: "messages-list",
-        items: { $state: "/messages" },
-        renderItem: { $item: "content" },
-        maxHeight: 15
+        flex: 1,
+        gap: 0
+      },
+      children: ["message-item"]
+    },
+    // Each message is a single wrapped Text node to minimize layout children.
+    // The role label is prepended inline to avoid nested Column overhead.
+    "message-item": {
+      type: "Text",
+      repeat: "/visibleMessages",
+      props: {
+        content: { $item: "display" },
+        wrap: true
       }
     },
     "input-section": {
@@ -49,7 +65,11 @@ const initialSpec: Spec = {
       props: {
         gap: 1,
         padding: 1,
-        border: "top"
+        border: "single",
+        borderTop: true,
+        borderBottom: false,
+        borderLeft: false,
+        borderRight: false
       },
       children: ["input", "send-btn"]
     },
@@ -58,10 +78,7 @@ const initialSpec: Spec = {
       props: {
         id: "chat-input",
         placeholder: "Type your message...",
-        value: { $state: "/inputValue" },
-        bindings: {
-          value: "/inputValue"
-        },
+        value: { $bindState: "/inputValue" },
         disabled: { $state: "/isStreaming" }
       }
     },
@@ -69,7 +86,7 @@ const initialSpec: Spec = {
       type: "Button",
       props: {
         id: "send-btn",
-        label: { $cond: { $state: "/isStreaming", then: "⏳ Thinking...", else: "📤 Send" } },
+        label: { $cond: { $state: "/isStreaming" }, $then: "⏳ Thinking...", $else: "📤 Send" },
         disabled: { $state: "/isStreaming" }
       },
       on: {
@@ -80,14 +97,12 @@ const initialSpec: Spec = {
     }
   },
   state: {
-    messages: [
-      { role: "system", content: "Welcome! I'm an AI assistant. Type a message to begin." }
-    ],
+    messages: [] as Array<{ role: string; content: string }>,
+    visibleMessages: [] as Array<{ display: string }>,
     inputValue: "",
     isStreaming: false
   }
-
-
+};
 
 // Simulated AI response generator
 async function* simulateAIResponse(userMessage: string): AsyncGenerator<string> {
@@ -108,62 +123,88 @@ async function* simulateAIResponse(userMessage: string): AsyncGenerator<string> 
   }
 }
 
+/** Format a message for display with role prefix */
+function formatMessage(msg: { role: string; content: string }): string {
+  const roleEmoji = msg.role === "user" ? "👤" : msg.role === "assistant" ? "🤖" : "ℹ️";
+  return `${roleEmoji} ${msg.role}: ${msg.content}`;
+}
+
+/**
+ * Build the visibleMessages array from the messages tail.
+ * Each entry has a single `display` string that includes
+ * the role label, avoiding nested layout overhead.
+ */
+function buildVisibleMessages(messages: Array<{ role: string; content: string }>): Array<{ display: string }> {
+  const tail = messages.length <= MAX_VISIBLE_MESSAGES
+    ? messages
+    : messages.slice(-MAX_VISIBLE_MESSAGES);
+  return tail.map(msg => ({ display: formatMessage(msg) }));
+}
+
 async function main() {
-  console.log("Starting AI Chat example...\n");
-  console.log("This demonstrates SpecStream progressive rendering.\n");
+  const initialMessages = [
+    { role: "system", content: "Welcome! I'm an AI assistant. Type a message to begin." }
+  ];
 
   const app = createReziApp({
     spec: initialSpec,
     initialState: {
-      messages: [
-        { role: "system", content: "Welcome! I'm an AI assistant. Type a message to begin." }
-      ],
+      messages: initialMessages,
+      visibleMessages: buildVisibleMessages(initialMessages),
       inputValue: "",
       isStreaming: false
     },
-    customActions: {
+    actionHandlers: {
       sendMessage: async (_params, ctx) => {
-        const input = ctx.store.getState().inputValue as string;
+        const state = ctx.store.getSnapshot() as any;
+        const input = state.inputValue as string;
         if (!input.trim()) return;
 
         // Add user message
-        const messages = ctx.store.getState().messages as Array<{ role: string; content: string }>;
+        const messages = [...(state.messages as Array<{ role: string; content: string }>)];
         messages.push({ role: "user", content: input });
-        
+
         // Clear input and set streaming state
         ctx.store.update({
           messages,
+          visibleMessages: buildVisibleMessages(messages),
           inputValue: "",
           isStreaming: true
         });
 
-        // Create streaming renderer for AI response
-        const streamingRenderer = createStreamingRenderer({
-          onSpecUpdate: (spec) => {
-            app.renderer.setSpec(spec);
-          },
-          onError: (error) => {
-            console.error("Streaming error:", error);
-          }
-        });
-
         // Add placeholder for AI response
-        messages.push({ role: "assistant", content: "" });
-        const assistantIndex = messages.length - 1;
+        const assistantIndex = messages.length;
+        messages.push({ role: "assistant", content: "..." });
+        ctx.store.update({
+          messages,
+          visibleMessages: buildVisibleMessages(messages)
+        });
 
         // Stream AI response
         try {
           for await (const chunk of simulateAIResponse(input)) {
-            messages[assistantIndex].content += chunk;
-            ctx.store.update({ messages });
+            const currentMessages = [...(ctx.store.getSnapshot().messages as any)];
+            if (currentMessages[assistantIndex]) {
+              if (currentMessages[assistantIndex].content === "...") {
+                currentMessages[assistantIndex] = { ...currentMessages[assistantIndex], content: chunk };
+              } else {
+                currentMessages[assistantIndex] = {
+                  ...currentMessages[assistantIndex],
+                  content: currentMessages[assistantIndex].content + chunk
+                };
+              }
+              ctx.store.update({
+                messages: currentMessages,
+                visibleMessages: buildVisibleMessages(currentMessages)
+              });
+            }
           }
         } finally {
           ctx.store.update({ isStreaming: false });
         }
+      }
     },
-    config: {
-      executionMode: "inline"
-    }
+    debug: true
   });
 
   await app.run();

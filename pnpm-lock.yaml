@@ -58,6 +58,22 @@ importers:
         specifier: ^4.15.7
         version: 4.21.0
 
+  examples/static/00-minimal:
+    dependencies:
+      '@cbrunnkvist/json-render-rezitui':
+        specifier: workspace:*
+        version: link:../../../packages/json-render-rezitui
+      '@rezi-ui/core':
+        specifier: workspace:*
+        version: link:../../../reference/Rezi/packages/core
+      '@rezi-ui/node':
+        specifier: workspace:*
+        version: link:../../../reference/Rezi/packages/node
+    devDependencies:
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+
   examples/static/01-hello-world:
     dependencies:
       '@cbrunnkvist/json-render-rezitui':
@@ -170,6 +186,22 @@ importers:
       '@rezi-ui/node':
         specifier: 0.1.0-alpha.34
         version: 0.1.0-alpha.34
+
+  reference/Rezi/examples/native-rezi-wrap-demo:
+    dependencies:
+      '@rezi-ui/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@rezi-ui/node':
+        specifier: workspace:*
+        version: link:../../packages/node
+    devDependencies:
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.2
 
   reference/Rezi/examples/raw-draw-demo:
     dependencies:

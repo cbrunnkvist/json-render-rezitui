@@ -1,0 +1,17 @@
+{
+  "name": "@cbrunnkvist/json-render-rezitui-example-minimal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@cbrunnkvist/json-render-rezitui": "workspace:*",
+    "@rezi-ui/core": "workspace:*",
+    "@rezi-ui/node": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  }
+}

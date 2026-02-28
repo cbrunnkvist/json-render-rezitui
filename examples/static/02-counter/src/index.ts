@@ -1,6 +1,6 @@
 /**
  * Counter Example
- * 
+ *
  * Demonstrates interactive state management with json-render-rezitui.
  * Shows how actions modify state and trigger re-renders.
  */
@@ -44,9 +44,17 @@ const spec = {
     "count-text": {
       type: "Text",
       props: {
-        content: { $state: "/count" },
+        content: { $template: "${/count}" },
         bold: true,
-        color: { $cond: { $state: "/count", gt: 0, then: "green", else: { $cond: { $state: "/count", lt: 0, then: "red", else: "white" } } } },
+        color: {
+          $cond: { $state: "/count", gt: 0 },
+          $then: "green",
+          $else: {
+            $cond: { $state: "/count", lt: 0 },
+            $then: "red",
+            $else: "white"
+          }
+        },
         align: "center"
       }
     },
@@ -78,7 +86,13 @@ const spec = {
           action: "setState",
           params: {
             path: "/count",
-            value: { $template: "${count - step}" }
+            value: {
+              $computed: "subtract",
+              args: {
+                a: { $state: "/count" },
+                b: { $state: "/step" }
+              }
+            }
           }
         }
       }
@@ -111,7 +125,13 @@ const spec = {
           action: "setState",
           params: {
             path: "/count",
-            value: { $template: "${count + step}" }
+            value: {
+              $computed: "add",
+              args: {
+                a: { $state: "/count" },
+                b: { $state: "/step" }
+              }
+            }
           }
         }
       }
@@ -136,9 +156,15 @@ const spec = {
       props: {
         id: "step-input",
         type: "number",
-        value: { $state: "/step" },
-        bindings: {
-          value: "/step"
+        value: { $bindState: "/step" }
+      },
+      on: {
+        input: {
+          action: "setState",
+          params: {
+            path: "/step",
+            value: "$event.value"
+          }
         }
       }
     },
@@ -153,36 +179,28 @@ const spec = {
     "info-text": {
       type: "Text",
       props: {
-        content: "💡 Try changing the step size and clicking the buttons!",
+        content: "💡 Tab between buttons and input. Press Enter to activate buttons.",
         color: "dim"
       }
     }
   },
   state: {
     count: 0,
-    step: 1
+    step: "1"
   }
 };
 
 
 async function main() {
-  console.log("Starting Counter example...\n");
-
   const app = createReziApp({
     spec,
-    initialState: { count: 0, step: 1 },
-    config: {
-      executionMode: "inline"
+    initialState: { count: 0, step: "1" },
+    functions: {
+      add: (args) => Number(args.a) + Number(args.b),
+      subtract: (args) => Number(args.a) - Number(args.b),
     },
     debug: false
   });
-
-  // Log state changes for demonstration
-  const originalSetState = app.renderer.setState.bind(app.renderer);
-  app.renderer.setState = (path, value) => {
-    console.log(`[State Change] ${path} = ${JSON.stringify(value)}`);
-    return originalSetState(path, value);
-  };
 
   await app.run();
 }

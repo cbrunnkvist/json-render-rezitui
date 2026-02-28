@@ -98,6 +98,8 @@ export interface ReziComponentContext<P = Record<string, unknown>> {
   children?: VNode[];
   /** Emit an event to trigger action handlers */
   emit: (event: string, params?: unknown) => void;
+  /** Execute a built-in or custom action directly */
+  dispatchAction: (actionName: string, params?: Record<string, unknown>) => Promise<void>;
   /** Get event handle for binding checks */
   on: (eventName: string) => EventHandle;
   /** Generate a deterministic ID based on element key path */
@@ -112,7 +114,7 @@ export interface ReziComponentContext<P = Record<string, unknown>> {
  */
 export interface EventHandle {
   /** Emit the event to trigger bound actions */
-  emit: () => void;
+  emit: (params?: unknown) => void;
   /** Whether the event has handlers bound */
   bound: boolean;
   /** Whether any handler calls preventDefault */

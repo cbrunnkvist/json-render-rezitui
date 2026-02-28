@@ -97,15 +97,10 @@ const spec = {
 };
 
 async function main() {
-  console.log("Starting Hello World example...\n");
-
   // Create the Rezi app with our spec
   const app = createReziApp({
     spec,
     initialState: {},
-    config: {
-      executionMode: "inline"
-    },
     debug: false
   });
 

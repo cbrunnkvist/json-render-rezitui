@@ -10,6 +10,21 @@ import type {
 import type { ReziComponentContext } from "../types.js";
 
 // =============================================================================
+// Spinner Component
+// =============================================================================
+
+/**
+ * Spinner component - animated loading indicator.
+ * Maps to ui.spinner() for spinner visualization.
+ *
+ * @param ctx - Component context with props and children
+ * @returns VNode for the Spinner
+ */
+export function Spinner(ctx: ReziComponentContext<any>): VNode {
+  return ui.spinner(ctx.props);
+}
+
+// =============================================================================
 // CodeEditor Component
 // =============================================================================
 

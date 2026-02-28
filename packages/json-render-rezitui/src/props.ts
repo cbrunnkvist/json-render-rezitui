@@ -24,6 +24,8 @@ export interface ReziPropResolutionContext extends PropResolutionContext {
   repeatIndex?: number;
   /** Absolute state path to the current repeat item (e.g. "/todos/0"). */
   repeatBasePath?: string;
+  /** Arbitrary event state for $event references */
+  event?: unknown;
 }
 
 /**
@@ -117,6 +119,13 @@ export function resolveActionParam(
   value: unknown,
   ctx: ReziPropResolutionContext,
 ): unknown {
+  if (typeof value === "string" && value.startsWith("$event")) {
+    if (value === "$event") return ctx.event;
+    if (value.startsWith("$event.") && ctx.event && typeof ctx.event === "object") {
+      const path = value.slice("$event.".length);
+      return (ctx.event as Record<string, unknown>)[path];
+    }
+  }
   return coreResolveActionParam(value, ctx);
 }
 

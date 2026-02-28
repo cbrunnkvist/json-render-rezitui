@@ -2,7 +2,7 @@ import type { StateModel } from "@json-render/core";
 import type { ReziComponents, ReziActions } from "./types.js";
 import type { ActionHandlers } from "./actions.js";
 import { ReziRenderer, type ReziRendererOptions } from "./renderer.js";
-import { defaultComponents } from "./integration.js";
+import { defaultComponents } from "./defaults.js";
 
 /**
  * Rezi component catalog type.

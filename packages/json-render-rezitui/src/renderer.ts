@@ -3,11 +3,21 @@ import { setRendererContext } from "./context.js";
 
 import type { Spec, UIElement, StateStore, StateModel, ActionBinding } from "@json-render/core";
 import { createStateStore, getByPath } from "@json-render/core";
-import { ui, type VNode } from "@rezi-ui/core";
+import { ui, type VNode, type Toast } from "@rezi-ui/core";
 import type { ReziComponents, ReziComponentContext, EventHandle } from "./types.js";
 import { evaluateVisibility, createVisibilityContext, type VisibilityCondition } from "./visibility.js";
 import { executeAction, type ActionHandlers } from "./actions.js";
-import { createPropResolutionContext, resolveActionParam } from "./props.js";
+import {
+  createPropResolutionContext,
+  resolveActionParam,
+  resolveElementProps,
+  resolveBindings,
+  type ComputedFunction,
+  type ReziPropResolutionContext,
+} from "./props.js";
+import { mapStyles } from "./styles.js";
+import { defaultComponents } from "./defaults.js";
+import { logDebug } from "./logger.js";
 
 export type { ReziComponents } from "./types.js";
 
@@ -27,6 +37,17 @@ export interface ReziRendererOptions {
   debug?: boolean;
   /** Action handlers registry for executing actions on events */
   actionHandlers?: ActionHandlers;
+  /** Registered computed functions for $computed expressions */
+  functions?: Record<string, ComputedFunction>;
+
+  /** Callback to request focus on a widget ID */
+  requestFocus?: (id: string) => void;
+  /** Callback to add a toast notification */
+  addToast?: (toast: Toast) => void;
+  /** Callback to quit the application */
+  quit?: (code?: number, message?: string) => void;
+  /** Callback to navigate to a route */
+  navigate?: (path: string, params?: Record<string, unknown>) => void;
 }
 
 /**
@@ -38,12 +59,15 @@ interface RenderContext {
   repeatItem?: unknown;
   /** Current repeat index (for repeat scopes) */
   repeatIndex?: number;
+  /** Absolute state path to the current repeat item (for repeat scopes) */
+  repeatBasePath?: string;
   /** Current element key path for ID generation */
   elementKey?: string;
   spec: Spec;
   components: ReziComponents;
   state: StateModel;
   debug: boolean;
+  functions: Record<string, ComputedFunction>;
 }
 
 /**
@@ -70,6 +94,15 @@ export class ReziRenderer {
   private onStateChange?: () => void;
   /** Action handlers registry for executing actions on events */
   private actionHandlers: ActionHandlers;
+  /** Registered computed functions for $computed expressions */
+  private functions: Record<string, ComputedFunction>;
+
+  // Callbacks for actions
+  private requestFocusCallback?: (id: string) => void;
+  private addToastCallback?: (toast: Toast) => void;
+  private quitCallback?: (code?: number, message?: string) => void;
+  private navigateCallback?: (path: string, params?: Record<string, unknown>) => void;
+
   /** Flag to track if we're currently in render phase */
   private inRender = false;
   /** Queue of pending state updates to apply after render */
@@ -79,10 +112,16 @@ export class ReziRenderer {
 
   constructor(options: ReziRendererOptions = {}) {
     this.store = options.store ?? createStateStore(options.initialState ?? {});
-    this.components = options.components ?? {};
+    this.components = options.components ?? defaultComponents;
     this.debug = options.debug ?? false;
     this.onStateChange = options.onStateChange;
     this.actionHandlers = options.actionHandlers ?? {};
+    this.functions = options.functions ?? {};
+
+    this.requestFocusCallback = options.requestFocus;
+    this.addToastCallback = options.addToast;
+    this.quitCallback = options.quit;
+    this.navigateCallback = options.navigate;
 
     // Subscribe to store changes and forward to onStateChange callback
     this.storeUnsubscribe = this.store.subscribe(() => {
@@ -95,10 +134,12 @@ export class ReziRenderer {
    * @param spec - The JSON spec to render, or null to clear.
    */
   setSpec(spec: Spec | null): void {
+    logDebug(this.debug, "setSpec", spec?.root ? `root: ${spec.root}` : "null");
     this.spec = spec;
-    
+
     // Initialize state from spec if provided
     if (spec?.state) {
+      logDebug(this.debug, "Initializing state from spec");
       this.store.update(spec.state);
     }
   }
@@ -119,12 +160,29 @@ export class ReziRenderer {
    * @param value - The value to set.
    */
   setState(path: string, value: unknown): void {
+    logDebug(this.debug, "setState", path, value);
     if (this.inRender) {
+      logDebug(this.debug, "  Queuing state update (in render)");
       // Queue update for after render
       this.pendingUpdates.push({ path, value });
       return;
     }
     this.store.set(path, value);
+  }
+
+  /**
+   * Set the callbacks for actions.
+   */
+  setCallbacks(callbacks: {
+    requestFocus?: (id: string) => void;
+    addToast?: (toast: Toast) => void;
+    quit?: (code?: number, message?: string) => void;
+    navigate?: (path: string, params?: Record<string, unknown>) => void;
+  }): void {
+    if (callbacks.requestFocus) this.requestFocusCallback = callbacks.requestFocus;
+    if (callbacks.addToast) this.addToastCallback = callbacks.addToast;
+    if (callbacks.quit) this.quitCallback = callbacks.quit;
+    if (callbacks.navigate) this.navigateCallback = callbacks.navigate;
   }
 
   /**
@@ -174,6 +232,7 @@ export class ReziRenderer {
       state: this.store.getSnapshot(),
       debug: this.debug,
       elementKey: this.spec.root,
+      functions: this.functions,
     };
 
     // Set inRender flag to catch mutations during render
@@ -190,8 +249,6 @@ export class ReziRenderer {
       this.flushPendingUpdates();
     }
   }
-
-  /**
 
   /**
    * Subscribe to state changes.
@@ -237,19 +294,28 @@ export class ReziRenderer {
       ctx.repeatIndex,
     );
     if (!evaluateVisibility(element.visible, visibilityCtx)) {
+      logDebug(this.debug, `  Element "${element.type}" (${ctx.elementKey}) is hidden by visibility condition`);
       return null;
     }
+
+    // Resolve props and bindings
+    const propCtx = createPropResolutionContext(
+      ctx.state,
+      ctx.repeatItem,
+      ctx.repeatIndex,
+      ctx.repeatBasePath,
+      ctx.functions
+    );
+    const resolvedProps = resolveElementProps(element.props ?? {}, propCtx);
+    const resolvedBindings = resolveBindings(element.props ?? {}, propCtx);
+
+    logDebug(this.debug, `  Rendering element "${element.type}" (${ctx.elementKey})`, { props: resolvedProps });
 
     // Get the component renderer for this type
     const componentFn = ctx.components[element.type];
 
     if (!componentFn) {
-      // No renderer registered - try built-in mappings
-      const builtinVNode = this.renderBuiltinElement(element, ctx);
-      if (builtinVNode) {
-        return builtinVNode;
-      }
-
+      logDebug(this.debug, `  [WARN] No component registered for type "${element.type}"`);
       return null;
     }
 
@@ -273,14 +339,19 @@ export class ReziRenderer {
 
         // Build a fresh context with live store state so that $state
         // references in later actions see mutations from earlier ones.
-        const propCtx = createPropResolutionContext(
-          this.store.getSnapshot(),
-          ctx.repeatItem,
-          ctx.repeatIndex
-        );
+        const currentPropCtx: ReziPropResolutionContext = {
+          ...createPropResolutionContext(
+            this.store.getSnapshot(),
+            ctx.repeatItem,
+            ctx.repeatIndex,
+            ctx.repeatBasePath,
+            ctx.functions
+          ),
+          event: params
+        };
         const resolved: Record<string, unknown> = {};
         for (const [key, val] of Object.entries(b.params)) {
-          resolved[key] = resolveActionParam(val, propCtx);
+          resolved[key] = resolveActionParam(val, currentPropCtx);
         }
         await this.executeActionBinding(b, resolved);
       }
@@ -290,22 +361,29 @@ export class ReziRenderer {
     const on = (eventName: string): EventHandle => {
       const binding = onBindings?.[eventName];
       if (!binding) {
-        return { emit: () => {}, shouldPreventDefault: false, bound: false };
+        return { emit: () => { }, shouldPreventDefault: false, bound: false };
       }
       const actionBindings = Array.isArray(binding) ? binding : [binding];
       const shouldPreventDefault = actionBindings.some((b) => b.preventDefault);
       return {
-        emit: () => emit(eventName),
+        emit: (params?: unknown) => emit(eventName, params),
         shouldPreventDefault,
         bound: true,
       };
     };
+
     // Create component context
     const componentCtx: ReziComponentContext = {
-      props: element.props,
+      props: {
+        ...resolvedProps,
+        bindings: resolvedBindings,
+      },
       children,
       emit: (event: string, params?: unknown) => {
         emit(event, params);
+      },
+      dispatchAction: async (actionName: string, params?: Record<string, unknown>) => {
+        await this.executeActionBinding({ action: actionName }, params ?? {});
       },
       on,
       /** Generate a deterministic ID based on element key and suffix */
@@ -320,6 +398,7 @@ export class ReziRenderer {
     try {
       return componentFn(componentCtx);
     } catch (error) {
+      if (this.debug) console.error(`Error rendering component "${element.type}":`, error);
       return null;
     }
   }
@@ -333,6 +412,7 @@ export class ReziRenderer {
     binding: ActionBinding,
     params: Record<string, unknown>
   ): Promise<void> {
+    logDebug(this.debug, "Executing action", binding.action, params);
     await executeAction(
       binding.action,
       params,
@@ -340,77 +420,12 @@ export class ReziRenderer {
       {
         store: this.store,
         debug: this.debug,
+        requestFocus: this.requestFocusCallback,
+        addToast: this.addToastCallback,
+        quit: this.quitCallback,
+        navigate: this.navigateCallback,
       }
     );
-  }
-
-  /**
-   * Render built-in Rezi widget types directly.
-   * Provides default mappings for common widgets.
-   */
-  private renderBuiltinElement(element: UIElement, ctx: RenderContext): VNode | null {
-    const props = element.props as Record<string, unknown>;
-    const children = this.renderChildren(element, ctx);
-
-    switch (element.type) {
-      case "Text":
-      case "text": {
-        const content = (props?.content ?? props?.text ?? "") as string;
-        return ui.text(content);
-      }
-
-      case "Box":
-      case "box": {
-        return ui.box(props as Record<string, unknown>, children);
-      }
-
-      case "Row":
-      case "row":
-      case "HStack":
-      case "hstack": {
-        return ui.row(props as Record<string, unknown>, children);
-      }
-
-      case "Column":
-      case "column":
-      case "VStack":
-      case "vstack": {
-        return ui.column(props as Record<string, unknown>, children);
-      }
-      case "Button":
-      case "button": {
-        // Use element key for deterministic ID if no explicit ID provided
-        // Use element key for deterministic ID if no explicit ID provided
-        const buttonId = props?.id 
-          ? (props.id as string)
-          : (ctx.elementKey ? `${ctx.elementKey}--button` : "button");
-        const label = (props?.label ?? props?.text ?? "Button") as string;
-        return ui.button(buttonId, label, props as Record<string, unknown>);
-      }
-      case "Input":
-      case "input": {
-        // Use element key for deterministic ID if no explicit ID provided
-        // Use element key for deterministic ID if no explicit ID provided
-        const inputId = props?.id 
-          ? (props.id as string)
-          : (ctx.elementKey ? `${ctx.elementKey}--input` : "input");
-        const value = (props?.value ?? "") as string;
-        return ui.input(inputId, value, props as Record<string, unknown>);
-      }
-
-      case "Spacer":
-      case "spacer": {
-        return ui.spacer(props as Record<string, unknown>);
-      }
-
-      case "Divider":
-      case "divider": {
-        return ui.divider(props as Record<string, unknown>);
-      }
-
-      default:
-        return null;
-    }
   }
 
   /**
@@ -428,8 +443,35 @@ export class ReziRenderer {
     for (const childKey of element.children) {
       const childElement = this.spec?.elements?.[childKey];
       if (!childElement) continue;
-      // Create child context with updated element key
-      // Create child context with updated element key
+
+      // Handle 'repeat' property
+      if (childElement.repeat) {
+        const repeatPath = typeof childElement.repeat === "string"
+          ? childElement.repeat
+          : (childElement.repeat as any).$state; // Simple support for {$state: "..."}
+
+        if (repeatPath) {
+          const repeatData = this.getState(repeatPath);
+          if (Array.isArray(repeatData)) {
+            repeatData.forEach((item, index) => {
+              const childCtx: RenderContext = {
+                ...ctx,
+                elementKey: `${ctx.elementKey ?? ""}--${childKey}--${index}`,
+                repeatItem: item,
+                repeatIndex: index,
+                repeatBasePath: `${repeatPath}/${index}`,
+              };
+              const childVNode = this.renderElement(childElement, childCtx);
+              if (childVNode) {
+                childNodes.push(childVNode);
+              }
+            });
+            continue; // Move to next childKey
+          }
+        }
+      }
+
+      // Normal single element render
       const childCtx: RenderContext = {
         ...ctx,
         elementKey: ctx.elementKey ? `${ctx.elementKey}--${childKey}` : childKey,

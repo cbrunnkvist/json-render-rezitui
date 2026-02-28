@@ -14,13 +14,15 @@ function getSystemStats() {
   const totalMem = os.totalmem();
   const freeMem = os.freemem();
   const usedMem = totalMem - freeMem;
-  
+  const cpuPercent = Math.round(Math.random() * 100); // Simulated
+  const memPercent = Math.round((usedMem / totalMem) * 100);
+
   return {
-    cpu: Math.round(Math.random() * 100), // Simulated - use actual CPU stats in production
+    cpu: cpuPercent,
     memory: {
       total: Math.round(totalMem / 1024 / 1024 / 1024), // GB
       used: Math.round(usedMem / 1024 / 1024 / 1024),
-      percent: Math.round((usedMem / totalMem) * 100)
+      percent: memPercent
     },
     uptime: os.uptime(),
     processes: getProcessList()
@@ -56,6 +58,23 @@ function formatUptime(seconds: number): string {
   return `${hours}h ${minutes}m`;
 }
 
+function makeBar(percent: number, width = 20): string {
+  const filled = Math.round((percent / 100) * width);
+  return "[" + "#".repeat(filled) + "-".repeat(width - filled) + "]";
+}
+
+function cpuColor(cpu: number): string {
+  if (cpu > 80) return "red";
+  if (cpu > 50) return "yellow";
+  return "green";
+}
+
+function memColor(percent: number): string {
+  if (percent > 80) return "red";
+  if (percent > 60) return "yellow";
+  return "green";
+}
+
 function createSpec(platform: string, stats: ReturnType<typeof getSystemStats>) {
   return {
     root: "main",
@@ -85,7 +104,7 @@ function createSpec(platform: string, stats: ReturnType<typeof getSystemStats>) 
       subtitle: {
         type: "Text",
         props: {
-          content: { $template: "Platform: ${platform} | Uptime: ${uptime}" },
+          content: { $template: "Platform: ${/platform} | Uptime: ${/uptime}" },
           color: "gray",
           align: "center"
         }
@@ -117,15 +136,15 @@ function createSpec(platform: string, stats: ReturnType<typeof getSystemStats>) 
       "cpu-value": {
         type: "Text",
         props: {
-          content: { $template: "${cpu}%" },
+          content: { $template: "${/cpu}%" },
           bold: true,
-          color: { $cond: { $state: "/cpu", gt: 80, then: "red", else: { $cond: { $state: "/cpu", gt: 50, then: "yellow", else: "green" } } } }
+          color: { $state: "/cpuColor" }
         }
       },
       "cpu-bar": {
         type: "Text",
         props: {
-          content: { $template: "[${'#'.repeat(Math.round(cpu/5))}${'-'.repeat(20-Math.round(cpu/5))}]" }
+          content: { $state: "/cpuBar" }
         }
       },
       "mem-metric": {
@@ -147,22 +166,21 @@ function createSpec(platform: string, stats: ReturnType<typeof getSystemStats>) 
       "mem-value": {
         type: "Text",
         props: {
-          content: { $template: "${memory.used}GB / ${memory.total}GB" },
+          content: { $template: "${/memory/used}GB / ${/memory/total}GB" },
           bold: true,
-          color: { $cond: { $state: "/memory/percent", gt: 80, then: "red", else: { $cond: { $state: "/memory/percent", gt: 60, then: "yellow", else: "green" } } } }
+          color: { $state: "/memColor" }
         }
       },
       "mem-bar": {
         type: "Text",
         props: {
-          content: { $template: "[${'#'.repeat(Math.round(memory.percent/5))}${'-'.repeat(20-Math.round(memory.percent/5))}]" }
+          content: { $state: "/memBar" }
         }
       },
       "processes-header": {
         type: "Box",
         props: {
-          padding: 1,
-          border: "bottom"
+          padding: 1
         },
         children: ["processes-title"]
       },
@@ -189,15 +207,14 @@ function createSpec(platform: string, stats: ReturnType<typeof getSystemStats>) 
       footer: {
         type: "Box",
         props: {
-          padding: 1,
-          border: "top"
+          padding: 1
         },
         children: ["refresh-info"]
       },
       "refresh-info": {
         type: "Text",
         props: {
-          content: { $template: "⏱️  Refreshing every ${refreshRate}ms | Press Ctrl+C to exit" },
+          content: "⏱️  Refreshing every 1000ms | Press Ctrl+C to exit",
           color: "dim",
           align: "center"
         }
@@ -209,28 +226,34 @@ function createSpec(platform: string, stats: ReturnType<typeof getSystemStats>) 
       memory: stats.memory,
       uptime: formatUptime(stats.uptime),
       processes: stats.processes,
+      cpuColor: cpuColor(stats.cpu),
+      cpuBar: makeBar(stats.cpu),
+      memColor: memColor(stats.memory.percent),
+      memBar: makeBar(stats.memory.percent),
       refreshRate: 1000
     }
   };
 }
 
 async function main() {
-  console.log("Starting System Dashboard...\n");
-  console.log("Press Ctrl+C to exit\n");
-
   const platform = os.platform();
   const initialStats = getSystemStats();
-  
+
   const app = createReziApp({
     spec: createSpec(platform, initialStats),
     initialState: {
       platform,
-      ...initialStats
+      cpu: initialStats.cpu,
+      memory: initialStats.memory,
+      uptime: formatUptime(initialStats.uptime),
+      processes: initialStats.processes,
+      cpuColor: cpuColor(initialStats.cpu),
+      cpuBar: makeBar(initialStats.cpu),
+      memColor: memColor(initialStats.memory.percent),
+      memBar: makeBar(initialStats.memory.percent),
+      refreshRate: 1000
     },
-    config: {
-      executionMode: "inline"
-    },
-    debug: true
+    debug: false
   });
 
   // Update stats every second
@@ -240,15 +263,17 @@ async function main() {
     app.renderer.setState("/memory", stats.memory);
     app.renderer.setState("/uptime", formatUptime(stats.uptime));
     app.renderer.setState("/processes", stats.processes);
+    // Pre-compute derived display values
+    app.renderer.setState("/cpuColor", cpuColor(stats.cpu));
+    app.renderer.setState("/cpuBar", makeBar(stats.cpu));
+    app.renderer.setState("/memColor", memColor(stats.memory.percent));
+    app.renderer.setState("/memBar", makeBar(stats.memory.percent));
   }, 1000);
 
-  // Cleanup on exit
-  process.on("SIGINT", () => {
-    clearInterval(interval);
-    process.exit(0);
-  });
-
   await app.run();
+
+  // Clean up interval after app stops so the process can exit
+  clearInterval(interval);
 }
 
 main().catch((err) => {

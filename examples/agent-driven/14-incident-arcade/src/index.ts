@@ -1,5 +1,9 @@
+import * as dotenv from "dotenv";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import "dotenv/config";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, "../../../.env") });
 import { createReziApp, createStreamingRenderer } from "@cbrunnkvist/json-render-rezitui";
 import type { Spec } from "@json-render/core";
 
@@ -19,74 +23,74 @@ async function* getAiStream(
   prompt: string,
   signal: AbortSignal,
 ): AsyncGenerator<string> {
-    const urls = [
-        "https://api.opencode.com/v1/responses",
-        "https://api.opencode.com/v1/chat/completions",
-      ];
-      let response: Response | null = null;
-      let lastError: Error | null = null;
-    
-      for (const url of urls) {
+  const urls = [
+    "https://api.opencode.com/v1/responses",
+    "https://api.opencode.com/v1/chat/completions",
+  ];
+  let response: Response | null = null;
+  let lastError: Error | null = null;
+
+  for (const url of urls) {
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENCODE_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: OPENCODE_MODEL,
+          messages: [{ role: "user", content: prompt }],
+          stream: true,
+        }),
+        signal,
+      });
+      if (response.ok) {
+        lastError = null;
+        break;
+      }
+      lastError = new Error(
+        `API request failed with status ${response.status}: ${await response.text()}`,
+      );
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        return;
+      }
+      lastError = error as Error;
+    }
+  }
+
+  if (!response || !response.ok || !response.body) {
+    throw lastError || new Error("Failed to get a valid response from API.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const data = line.substring(6).trim();
+        if (data === "[DONE]") return;
         try {
-          response = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${OPENCODE_API_KEY}`,
-            },
-            body: JSON.stringify({
-              model: OPENCODE_MODEL,
-              messages: [{ role: "user", content: prompt }],
-              stream: true,
-            }),
-            signal,
-          });
-          if (response.ok) {
-            lastError = null;
-            break;
-          }
-          lastError = new Error(
-            `API request failed with status ${response.status}: ${await response.text()}`,
-          );
-        } catch (error: any) {
-          if (error.name === "AbortError") {
-            return;
-          }
-          lastError = error as Error;
+          const parsed = JSON.parse(data);
+          const content =
+            parsed.choices?.[0]?.delta?.content ?? parsed.content ?? "";
+          if (content) yield content;
+        } catch (e) {
+          // Ignore json parse errors on partial data
         }
       }
-    
-      if (!response || !response.ok || !response.body) {
-        throw lastError || new Error("Failed to get a valid response from API.");
-      }
-    
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-    
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-    
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-    
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.substring(6).trim();
-            if (data === "[DONE]") return;
-            try {
-              const parsed = JSON.parse(data);
-              const content =
-                parsed.choices?.[0]?.delta?.content ?? parsed.content ?? "";
-              if (content) yield content;
-            } catch (e) {
-              // Ignore json parse errors on partial data
-            }
-          }
-        }
-      }
+    }
+  }
 }
 
 // 3. Mock Data
@@ -126,57 +130,90 @@ const initialSpec: Spec = {
       props: { gap: 1, height: "100%" },
       children: ["incident-list-panel", "incident-details-panel", "incident-ai-panel"],
     },
-    // Incident List Panel (Host-Controlled)
     "incident-list-panel": {
+      type: "Box",
+      props: { width: 30 },
+      children: ["incident-list-inner-panel"],
+    },
+    "incident-list-inner-panel": {
       type: "Panel",
-      props: { title: "Active Incidents", width: "30%" },
+      props: { title: "Active Incidents" },
       children: ["incident-list"],
     },
     "incident-list": {
-        type: "List",
-        props: {
-            items: {
-                "$map": {
-                    "var": "incidents",
-                    "in": {
-                        "key": { "$get": "item.id" },
-                        "label": { "$format": "[%s] %s", "args": [{ "$get": "item.id" }, { "$get": "item.service" }] },
-                        "value": { "$get": "item.id" }
-                    }
-                }
-            },
-            value: { "$state": "/selectedIncidentId" },
-            bindings: { "value": "/selectedIncidentId" }
+      type: "Column",
+      props: { overflow: "scroll", height: "100%" },
+      children: ["incident-list-item"]
+    },
+    "incident-list-item": {
+      type: "Box",
+      repeat: "/incidents",
+      props: {
+        p: 1,
+        border: "bottom",
+        style: {
+          borderStyle: { color: "gray" },
+          bg: {
+            $cond: { "$state": "/selectedIncidentId", "eq": { "$item": "id" } },
+            $then: "blue",
+            $else: "none"
+          },
+          fg: {
+            $cond: { "$state": "/selectedIncidentId", "eq": { "$item": "id" } },
+            $then: "white",
+            $else: "white"
+          }
         }
+      },
+      on: {
+        click: {
+          action: "setState",
+          payload: { path: "/selectedIncidentId", value: { "$item": "id" } }
+        }
+      },
+      children: ["incident-list-item-content"]
+    },
+    "incident-list-item-content": {
+      type: "Text",
+      props: { content: { "$format": "[%s] %s", "args": [{ "$item": "id" }, { "$item": "service" }] } }
     },
     // Incident Details Panel (Host-Controlled)
     "incident-details-panel": {
-        type: "Panel",
-        props: { title: "Incident Details", width: "35%" },
-        children: ["incident-details-content"]
+      type: "Box",
+      props: { width: 35 },
+      children: ["incident-details-inner-panel"]
+    },
+    "incident-details-inner-panel": {
+      type: "Panel",
+      props: { title: "Incident Details" },
+      children: ["incident-details-content"]
     },
     "incident-details-content": {
-        type: "Column",
-        props: {
-            padding: 1,
-            gap: 1,
-            "$if": {
-                "cond": { "$state": "/selectedIncidentId" },
-                "then": {},
-                "else": { "hidden": true }
-            }
-        },
-        children: ["detail-id", "detail-service", "detail-status", "detail-severity", "detail-summary"]
+      type: "Column",
+      props: {
+        padding: 1,
+        gap: 1,
+        "$if": {
+          "cond": { "$state": "/selectedIncidentId" },
+          "then": {},
+          "else": { "hidden": true }
+        }
+      },
+      children: ["detail-id", "detail-service", "detail-status", "detail-severity", "detail-summary"]
     },
     "detail-id": { type: "Text", props: { content: { "$format": "ID: %s", "$state": "/incidents[id={ $state: /selectedIncidentId }].id" } } },
     "detail-service": { type: "Text", props: { content: { "$format": "Service: %s", "$state": "/incidents[id={ $state: /selectedIncidentId }].service" } } },
     "detail-status": { type: "Text", props: { content: { "$format": "Status: %s", "$state": "/incidents[id={ $state: /selectedIncidentId }].status" } } },
     "detail-severity": { type: "Text", props: { content: { "$format": "Severity: %s", "$state": "/incidents[id={ $state: /selectedIncidentId }].severity" } } },
     "detail-summary": { type: "Text", props: { content: { "$format": "Summary: %s", "$state": "/incidents[id={ $state: /selectedIncidentId }].summary" }, "wrap": "word" } },
-    // AI Assist Panel
     "incident-ai-panel": {
+      type: "Box",
+      props: { width: 35 },
+      children: ["incident-ai-inner-panel"],
+    },
+    "incident-ai-inner-panel": {
       type: "Panel",
-      props: { title: "AI Assistant", width: "35%" },
+      props: { title: "AI Assistant" },
       children: ["incident-ai-slot"],
     },
     "incident-ai-slot": {
@@ -208,6 +245,7 @@ async function main() {
   const app = createReziApp({
     initialState: initialSpec.state || {},
     spec: initialSpec,
+    debug: true,
     actionHandlers: {
       // Dangerous Action Handlers
       RESTART_SERVICE: async (params, ctx) => {
@@ -276,21 +314,21 @@ An incident has occurred. Based on the incident details, provide a Rezi spec for
             const { spec: generatedSpec, isValid } = streamingRenderer.push(chunk);
 
             if (isValid) {
-                const mainSpec = app.getSpec();
-                if (!mainSpec) continue;
+              const mainSpec = app.getSpec();
+              if (!mainSpec) continue;
 
-                const newElements = { ...mainSpec.elements, ...generatedSpec.elements };
-                newElements["incident-ai-panel"] = {
-                    ...(newElements["incident-ai-panel"] || { type: 'Panel' }),
-                    children: [generatedSpec.root],
-                };
-                const newState = { ...mainSpec.state, ...generatedSpec.state };
+              const newElements = { ...mainSpec.elements, ...generatedSpec.elements };
+              newElements["incident-ai-panel"] = {
+                ...(newElements["incident-ai-panel"] || { type: 'Panel' }),
+                children: [generatedSpec.root],
+              };
+              const newState = { ...mainSpec.state, ...generatedSpec.state };
 
-                app.setSpec({ ...mainSpec, elements: newElements, state: newState });
+              app.setSpec({ ...mainSpec, elements: newElements, state: newState });
             }
           }
         } catch (error: any) {
-            ctx.store.update({ error: (error as Error).message });
+          ctx.store.update({ error: (error as Error).message });
         } finally {
           ctx.store.update({ isStreaming: false });
         }
@@ -299,10 +337,10 @@ An incident has occurred. Based on the incident details, provide a Rezi spec for
   });
 
   // Trigger AI generation when the selected incident changes
-  app.store.subscribe(
+  app.renderer.store.subscribe(
     (state) => state.selectedIncidentId,
     () => {
-        app.dispatchAction("generate", {});
+      app.dispatchAction("generate", {});
     }
   );
 

@@ -7,6 +7,7 @@ import {
   type LogsConsoleProps,
 } from "@rezi-ui/core";
 import type { ReziComponentContext } from "../types.js";
+import { mapStyles } from "../styles.js";
 
 // =============================================================================
 // Page Component
@@ -49,6 +50,10 @@ export interface PanelProps {
   variant?: "none" | "single" | "double" | "rounded";
   p?: number;
   gap?: number;
+  width?: number | string;
+  height?: number | string;
+  border?: string;
+  borderColor?: string;
   style?: Record<string, unknown>;
 }
 
@@ -65,7 +70,7 @@ export interface PanelProps {
  * { type: "Panel", props: { variant: "rounded", p: 1 }, children: [...] }
  */
 export function Panel(ctx: ReziComponentContext<PanelProps>): VNode {
-  const { id, key, title, variant, p, gap, style } = ctx.props;
+  const { id, key, title, variant, p, gap, width, height, border, borderColor, style } = ctx.props;
 
   const options: {
     id?: string;
@@ -74,6 +79,10 @@ export function Panel(ctx: ReziComponentContext<PanelProps>): VNode {
     variant?: PanelProps["variant"];
     p?: number;
     gap?: number;
+    width?: number | string;
+    height?: number | string;
+    border?: string;
+    borderColor?: string;
     style?: Record<string, unknown>;
   } = {};
 
@@ -83,9 +92,13 @@ export function Panel(ctx: ReziComponentContext<PanelProps>): VNode {
   if (variant !== undefined) options.variant = variant;
   if (p !== undefined) options.p = p;
   if (gap !== undefined) options.gap = gap;
+  if (width !== undefined) options.width = width;
+  if (height !== undefined) options.height = height;
+  if (border !== undefined) options.border = border;
+  if (borderColor !== undefined) options.borderColor = borderColor;
   if (style !== undefined) options.style = style;
 
-  return ui.panel(options, ctx.children ?? []);
+  return ui.panel(mapStyles(options), ctx.children ?? []);
 }
 
 // =============================================================================
@@ -193,7 +206,7 @@ export function Table<T = Record<string, unknown>>(
     }),
   };
 
-  return ui.table(tableProps);
+  return ui.table(mapStyles(tableProps));
 }
 
 // =============================================================================
@@ -311,7 +324,7 @@ export function Logs(ctx: ReziComponentContext<LogsSchemaProps>): VNode {
       message: entry.message,
     })),
     scrollTop: 0,
-    onScroll: () => {},
+    onScroll: () => { },
     ...(autoScroll !== undefined && { autoScroll }),
     ...(levelFilter !== undefined && { levelFilter }),
     ...(showTimestamps !== undefined && { showTimestamps }),
@@ -320,5 +333,5 @@ export function Logs(ctx: ReziComponentContext<LogsSchemaProps>): VNode {
     }),
   };
 
-  return ui.logsConsole(logsProps);
+  return ui.logsConsole(mapStyles(logsProps));
 }

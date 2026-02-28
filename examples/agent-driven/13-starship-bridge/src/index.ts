@@ -1,4 +1,9 @@
-import "dotenv/config";
+import * as dotenv from "dotenv";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, "../../../.env") });
 import { createReziApp, createStreamingRenderer } from "@cbrunnkvist/json-render-rezitui";
 import type { Spec } from "@json-render/core";
 
@@ -120,29 +125,29 @@ const initialSpec: Spec = {
     },
     "starship-telemetry-panel": {
       type: "Panel",
-      props: { title: "Telemetry", width: "30%", border: "single" },
+      props: { title: "Telemetry", width: 30, border: "single" },
       children: ["starship-telemetry-content"],
     },
     "starship-telemetry-content": {
-        type: "Column",
-        props: { gap: 1, padding: 1 },
-        children: ["ship-name-display", "status-display", "power-display"]
+      type: "Column",
+      props: { gap: 1, padding: 1 },
+      children: ["ship-name-display", "status-display", "power-display"]
     },
     "ship-name-display": {
-        type: "Text",
-        props: { content: { "$format": "Ship: %s", "$state": "/shipName" } }
+      type: "Text",
+      props: { content: { "$format": "Ship: %s", "$state": "/shipName" } }
     },
     "status-display": {
-        type: "Text",
-        props: { content: { "$format": "Status: %s", "$state": "/status" } }
+      type: "Text",
+      props: { content: { "$format": "Status: %s", "$state": "/status" } }
     },
     "power-display": {
-        type: "Text",
-        props: { content: { "$format": "Power: %s%", "$state": "/powerLevel" } }
+      type: "Text",
+      props: { content: { "$format": "Power: %s%", "$state": "/powerLevel" } }
     },
     "starship-ai-layout-panel": {
       type: "Panel",
-      props: { title: "AI-Generated Controls", width: "70%" },
+      props: { title: "AI-Generated Controls", width: 70 },
       children: ["starship-ai-layout-slot"],
     },
     "starship-ai-layout-slot": {
@@ -206,7 +211,7 @@ async function main() {
       // AI Generation Handler
       generate: async (_params, ctx) => {
         ctx.store.update({ isStreaming: true, error: null });
-        
+
         streamingRenderer.reset({
           root: "starship-ai-placeholder",
           elements: {
@@ -238,30 +243,30 @@ You are the AI for the USS Rezi's bridge controls. Generate a Rezi spec for a co
             const { spec: generatedSpec, isValid } = streamingRenderer.push(chunk);
 
             if (isValid) {
-                const mainSpec = app.getSpec();
-                if (!mainSpec) continue;
+              const mainSpec = app.getSpec();
+              if (!mainSpec) continue;
 
-                const newElements = {
-                    ...mainSpec.elements,
-                    ...generatedSpec.elements,
-                };
-                
-                newElements["starship-ai-layout-panel"] = {
-                    ...(newElements["starship-ai-layout-panel"] || { type: 'Panel' }),
-                    children: [generatedSpec.root],
-                };
+              const newElements = {
+                ...mainSpec.elements,
+                ...generatedSpec.elements,
+              };
 
-                const newState = { ...mainSpec.state, ...generatedSpec.state };
+              newElements["starship-ai-layout-panel"] = {
+                ...(newElements["starship-ai-layout-panel"] || { type: 'Panel' }),
+                children: [generatedSpec.root],
+              };
 
-                app.setSpec({
-                    ...mainSpec,
-                    elements: newElements,
-                    state: newState,
-                });
+              const newState = { ...mainSpec.state, ...generatedSpec.state };
+
+              app.setSpec({
+                ...mainSpec,
+                elements: newElements,
+                state: newState,
+              });
             }
           }
         } catch (error: any) {
-            ctx.store.update({ error: (error as Error).message });
+          ctx.store.update({ error: (error as Error).message });
         } finally {
           ctx.store.update({ isStreaming: false });
         }

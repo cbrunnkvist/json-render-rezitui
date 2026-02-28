@@ -1,5 +1,6 @@
 import { ui, type BoxProps, type StackProps, type VNode } from "@rezi-ui/core";
 import type { ReziComponentContext } from "../types.js";
+import { mapStyles } from "../styles.js";
 
 // =============================================================================
 // Box Component
@@ -13,7 +14,7 @@ import type { ReziComponentContext } from "../types.js";
  * @returns VNode for the Box
  */
 export function Box(ctx: ReziComponentContext<BoxProps>): VNode {
-  return ui.box(ctx.props, ctx.children);
+  return ui.box(mapStyles(ctx.props), ctx.children);
 }
 
 // =============================================================================
@@ -29,7 +30,7 @@ export function Box(ctx: ReziComponentContext<BoxProps>): VNode {
  */
 export function Row(ctx: ReziComponentContext<StackProps & { wrap?: boolean }>): VNode {
   const { wrap, ...stackProps } = ctx.props;
-  return ui.row(stackProps, ctx.children);
+  return ui.row(mapStyles(stackProps), ctx.children);
 }
 
 // =============================================================================
@@ -45,5 +46,5 @@ export function Row(ctx: ReziComponentContext<StackProps & { wrap?: boolean }>):
  */
 export function Column(ctx: ReziComponentContext<StackProps & { wrap?: boolean }>): VNode {
   const { wrap, ...stackProps } = ctx.props;
-  return ui.column(stackProps, ctx.children);
+  return ui.column(mapStyles(stackProps), ctx.children);
 }

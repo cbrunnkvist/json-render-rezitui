@@ -175,11 +175,13 @@ export {
   setRendererContext,
   withRenderer,
   mergeComponents,
-  defaultComponents,
   type CreateReziAppOptions,
   type CreateStreamingReziAppOptions,
   type ReziApp,
 } from "./integration.js";
+
+// Defaults
+export { defaultComponents } from "./defaults.js";
 
 // Registry
 export {

@@ -14,177 +14,41 @@ import {
 import type { ReziComponents, ReziComponentFn } from "./types.js";
 import type { ActionHandlers } from "./actions.js";
 import { createActionHandlers } from "./actions.js";
+import type { ComputedFunction } from "./props.js";
+import { defaultComponents } from "./defaults.js";
+import { logDebug } from "./logger.js";
 
-// Import all components for default registry
-import { Box, Row, Column } from "./components/layout.js";
-import {
-  Text,
-  Button,
-  Input,
-  Select,
-  Checkbox,
-  Slider,
-} from "./components/interactive.js";
-import { Page, Panel, Table, VirtualList, Logs } from "./components/advanced.js";
-import {
-  Modal,
-  Dialog,
-  Dropdown,
-  CommandPalette,
-} from "./components/overlays.js";
-import {
-  CodeEditor,
-  DiffViewer,
-  Canvas,
-  LineChart,
-  BarChart,
-  Gauge,
-} from "./components/visualization.js";
-
-// =============================================================================
-// Default Components Registry
-// =============================================================================
-
-/**
- * Default component registry with all built-in components.
- * Includes layout, interactive, advanced, overlay, and visualization components.
- */
-export const defaultComponents: ReziComponents = {
-  // Layout
-  Box,
-  Row,
-  Column,
-  HStack: Row, // Alias
-  VStack: Column, // Alias
-
-  // Interactive
-  Text,
-  Button,
-  Input,
-  Select,
-  Checkbox,
-  Slider,
-
-  // Advanced
-  Page,
-  Panel,
-  Table,
-  VirtualList,
-  Logs,
-
-  // Overlays
-  Modal,
-  Dialog,
-  Dropdown,
-  CommandPalette,
-
-  // Visualization
-  CodeEditor,
-  DiffViewer,
-  Canvas,
-  LineChart,
-  BarChart,
-  Gauge,
-};
 export { useRenderer, setRendererContext };
-
-
-// =============================================================================
-// Create Rezi App Options
-// =============================================================================
 
 /**
  * Options for creating a Rezi app with JSON spec rendering.
  */
 export interface CreateReziAppOptions<S extends StateModel = StateModel> {
-  /** Initial application state */
   initialState: S;
-  /** Component registry (defaults to defaultComponents) */
   components?: ReziComponents;
-  /** Action handlers (defaults to built-in handlers) */
   actionHandlers?: ActionHandlers;
-  /** Initial JSON spec to render */
   spec?: Spec;
-  /** App configuration (fpsCap, etc.) */
   config?: NodeAppConfig;
-  /** Theme or theme definition */
   theme?: Theme | ThemeDefinition;
-  /** Routes for multi-screen apps */
   routes?: readonly RouteDefinition<S>[];
-  /** Initial route */
   initialRoute?: string;
-  /** Hot reload options for development */
   hotReload?: NodeAppHotReloadOptions<S>;
-  /** Debug mode */
+  functions?: Record<string, ComputedFunction>;
   debug?: boolean;
-  /** Custom view wrapper - receives the rendered VNode and can modify it */
   wrapView?: (vnode: VNode | null, state: Readonly<S>) => VNode | null;
-  /** Callback when an action needs to quit the app */
-
 }
 
 /**
- * Extended app instance returned by createReziApp.
- * Combines NodeApp with renderer access.
+ * Extended app instance.
  */
 export interface ReziApp<S extends StateModel = StateModel> extends NodeApp<S> {
-  /** The underlying ReziRenderer instance */
   renderer: ReziRenderer;
-  /** Update the JSON spec to render */
   setSpec: (spec: Spec | null) => void;
-  /** Get the current JSON spec */
   getSpec: () => Spec | null;
-  /** Register additional components */
-  registerComponents: (components: ReziComponents) => void;
-  /** Register additional action handlers */
-  registerActionHandlers: (handlers: ActionHandlers) => void;
 }
-
-// =============================================================================
-// Create Rezi App
-// =============================================================================
 
 /**
  * Create a fully-wired Rezi app with JSON spec rendering.
- *
- * This function combines:
- * - `createNodeApp()` from @rezi-ui/node for terminal I/O
- * - `ReziRenderer` for JSON spec to VNode rendering
- * - Auto-wiring of view function to renderer.render()
- * - Optional hot reload integration
- *
- * @param options - Configuration options
- * @returns App instance with renderer access
- *
- * @example
- * ```ts
- * import { createReziApp, defaultComponents } from "@cbrunnkvist/json-render-rezitui";
- *
- * // Create app with initial state
- * const app = createReziApp({
- *   initialState: { user: null, items: [] },
- *   components: defaultComponents,
- *   config: { fpsCap: 30 },
- * });
- *
- * // Set spec from AI response
- * app.setSpec(spec);
- *
- * // Run the app
- * await app.run();
- * ```
- *
- * @example
- * ```ts
- * // With hot reload for development
- * const app = createReziApp({
- *   initialState: {},
- *   components: defaultComponents,
- *   hotReload: {
- *     viewModule: "./view.ts",
- *   },
- * });
- * ```
  */
 export function createReziApp<S extends StateModel = StateModel>(
   options: CreateReziAppOptions<S>
@@ -199,32 +63,15 @@ export function createReziApp<S extends StateModel = StateModel>(
     routes,
     initialRoute,
     hotReload,
+    functions,
     debug = false,
     wrapView,
   } = options;
 
-  // Create merged component registry
+  let isRunning = false;
+  let currentSpec: Spec | null = spec ?? null;
   let mergedComponents: ReziComponents = { ...components };
 
-  // Create action handlers with callbacks
-  const mergedActionHandlers: ActionHandlers = createActionHandlers({
-    overrides: actionHandlers,
-    debug,
-  });
-
-  // Create the renderer
-  const renderer = new ReziRenderer({
-    components: mergedComponents,
-    actionHandlers: mergedActionHandlers,
-    debug,
-  });
-
-  // Set initial spec if provided
-  if (spec) {
-    renderer.setSpec(spec);
-  }
-
-  // Create the NodeApp
   const nodeApp = createNodeApp<S>({
     initialState,
     config,
@@ -234,185 +81,181 @@ export function createReziApp<S extends StateModel = StateModel>(
     hotReload,
   });
 
-  // Track current spec
-  let currentSpec: Spec | null = spec ?? null;
+  const mergedActionHandlers: ActionHandlers = createActionHandlers({
+    overrides: actionHandlers,
+    debug,
+  });
 
-  // Create the view function
+  const renderer = new ReziRenderer({
+    components: mergedComponents,
+    actionHandlers: mergedActionHandlers,
+    functions,
+    debug,
+    quit: (code) => {
+      logDebug(true, "[ReziApp] Action quit requested", code);
+      app.stop();
+    },
+    navigate: (path, params) => {
+      logDebug(debug, "[ReziApp] Navigating to", path, params);
+    },
+    requestFocus: (id) => {
+      logDebug(debug, "[ReziApp] Requesting focus for", id);
+    }
+  });
+
+  // Default quit keybinding
+  nodeApp.keys({
+    "ctrl+c": () => {
+      logDebug(true, "[ReziApp] Ctrl+C pressed");
+      app.stop();
+    },
+  });
+
+  if (spec) {
+    renderer.setSpec(spec);
+  }
+
   const createViewFn = (): ((state: Readonly<S>) => VNode) => {
     return (state: Readonly<S>) => {
-      // Set renderer context for useRenderer() hook
       setRendererContext(renderer);
-
       try {
-        // Render the spec
         let vnode = renderer.render();
-
-        // Apply wrapper if provided
         if (wrapView) {
           vnode = wrapView(vnode, state);
         }
-
-        // Return vnode or fallback
         return vnode ?? ui.text("No content");
       } catch (error) {
+        logDebug(true, "[ReziApp] Render error:", error);
         return ui.text("Render error");
       } finally {
-        // Clear renderer context
         setRendererContext(null);
       }
     };
   };
 
-  // Wire the view function
   if (!routes) {
     nodeApp.view(createViewFn());
   }
 
-  // Subscribe renderer to state changes for re-render
+  // When the renderer's internal state changes, force Rezi to re-render
+  // by bumping a tick counter. A simple `s => s` identity update is a no-op
+  // in Rezi (same reference === no dirty flag), so we must produce a new
+  // state object.
   renderer.subscribe(() => {
-    // State changed - the app will re-render on next frame
-    // This is handled by Rezi's update mechanism
+    if (isRunning) {
+      nodeApp.update((s) => ({ ...s, __renderTick: ((s as any).__renderTick ?? 0) + 1 }));
+    }
   });
 
-  // Create the extended app interface
-  const reziApp: ReziApp<S> = Object.create(nodeApp, {
-    renderer: {
-      value: renderer,
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    },
-    setSpec: {
-      value: (newSpec: Spec | null) => {
-        currentSpec = newSpec;
-        renderer.setSpec(newSpec);
+  // Attach extensions
+  const app = nodeApp as unknown as ReziApp<S>;
+  app.renderer = renderer;
 
-        // Trigger hot reload if configured
-        if (hotReload && !routes) {
-          nodeApp.replaceView(createViewFn());
+  const originalStop = nodeApp.stop.bind(nodeApp);
+  let stopResolve: (() => void) | null = null;
+  let isStopping = false;
+
+  const doStop = async () => {
+    if (isStopping) return;
+    isStopping = true;
+    logDebug(true, "[ReziApp] Stopping...");
+    try {
+      await originalStop();
+    } catch {
+      // Ignore errors during stop (e.g. already stopped)
+    }
+    isRunning = false;
+    if (stopResolve) {
+      const resolve = stopResolve;
+      stopResolve = null;
+      resolve();
+    }
+  };
+
+  app.run = async () => {
+    isRunning = true;
+    isStopping = false;
+    logDebug(true, "[ReziApp] Starting app");
+
+    nodeApp.onEvent((ev) => {
+      if (ev.kind === "fatal") {
+        logDebug(true, `[ReziApp] FATAL ERROR: ${ev.code} - ${ev.detail}`);
+      }
+    });
+
+    // Use start() + manual signal handling instead of Rezi's run(),
+    // which can resolve prematurely in some configurations.
+    await nodeApp.start();
+
+    // Block until stop() is called or a signal is received
+    return new Promise<void>((resolve) => {
+      // Keep the Node.js event loop alive — signal handlers alone don't
+      // prevent the process from exiting when there are no other active handles.
+      const keepAlive = setInterval(() => { }, 60_000);
+
+      stopResolve = () => {
+        clearInterval(keepAlive);
+        for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+          process.removeListener(sig, onSignal);
         }
-      },
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    },
-    getSpec: {
-      value: () => currentSpec,
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    },
-    registerComponents: {
-      value: (newComponents: ReziComponents) => {
-        mergedComponents = { ...mergedComponents, ...newComponents };
-        // Note: This doesn't update the existing renderer's components
-        // A new renderer would need to be created for that
-      },
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    },
-    registerActionHandlers: {
-      value: (newHandlers: ActionHandlers) => {
-        Object.assign(mergedActionHandlers, newHandlers);
-      },
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    },
-  });
+        logDebug(true, "[ReziApp] App stopped");
+        resolve();
+      };
 
-  return reziApp;
+      const onSignal = () => {
+        logDebug(true, "[ReziApp] Signal received");
+        doStop();
+      };
+
+      for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+        process.on(sig, onSignal);
+      }
+    });
+  };
+
+  app.stop = async () => {
+    logDebug(true, "[ReziApp] Stop called");
+    await doStop();
+  };
+
+  app.setSpec = (newSpec: Spec | null) => {
+    currentSpec = newSpec;
+    renderer.setSpec(newSpec);
+    if (hotReload && !routes) {
+      nodeApp.replaceView(createViewFn());
+    }
+    if (isRunning) {
+      nodeApp.update((s) => ({ ...s, __renderTick: ((s as any).__renderTick ?? 0) + 1 }));
+    }
+  };
+
+  app.getSpec = () => currentSpec;
+
+  return app;
 }
 
-// =============================================================================
-// Streaming App Helper
-// =============================================================================
-
-/**
- * Options for creating a streaming Rezi app.
- */
 export interface CreateStreamingReziAppOptions<S extends StateModel = StateModel>
   extends Omit<CreateReziAppOptions<S>, "spec"> {
-  /** Callback when spec is updated during streaming */
   onSpecUpdate?: (spec: Spec) => void;
 }
 
-/**
- * Create a Rezi app optimized for streaming AI responses.
- *
- * This is a convenience wrapper around createReziApp that sets up
- * the streaming renderer pattern for real-time UI updates.
- *
- * @param options - Configuration options
- * @returns App instance with streaming support
- *
- * @example
- * ```ts
- * import { createStreamingReziApp, defaultComponents } from "@cbrunnkvist/json-render-rezitui";
- *
- * const app = createStreamingReziApp({
- *   initialState: {},
- *   components: defaultComponents,
- * });
- *
- * // Process AI stream
- * for await (const chunk of aiStream) {
- *   app.renderer.setSpec(processChunk(chunk));
- * }
- *
- * await app.run();
- * ```
- */
 export function createStreamingReziApp<S extends StateModel = StateModel>(
   options: CreateStreamingReziAppOptions<S>
 ): ReziApp<S> {
   const { onSpecUpdate, ...restOptions } = options;
-
   const app = createReziApp<S>(restOptions);
 
-  // Subscribe to spec changes
   if (onSpecUpdate) {
     const originalSetSpec = app.setSpec;
-    Object.defineProperty(app, "setSpec", {
-      value: (spec: Spec | null) => {
-        originalSetSpec(spec);
-        if (spec) {
-          onSpecUpdate(spec);
-        }
-      },
-      enumerable: true,
-      configurable: false,
-      writable: false,
-    });
+    app.setSpec = (spec: Spec | null) => {
+      originalSetSpec(spec);
+      if (spec) onSpecUpdate(spec);
+    };
   }
 
   return app;
 }
 
-// =============================================================================
-// Utility Functions
-// =============================================================================
-
-/**
- * Create a component that wraps another component with renderer access.
- *
- * Useful for creating higher-order components that need to interact
- * with the renderer context.
- *
- * @param component - The component to wrap
- * @param wrapper - Wrapper function that receives component result and renderer
- * @returns Wrapped component
- *
- * @example
- * ```ts
- * const EnhancedButton = withRenderer(Button, (vnode, renderer) => {
- *   const count = renderer.getState("/count");
- *   // Modify vnode or return new one
- *   return vnode;
- * });
- * ```
- */
 export function withRenderer<P = Record<string, unknown>>(
   component: ReziComponentFn<P>,
   wrapper: (vnode: VNode, renderer: ReziRenderer) => VNode
@@ -424,20 +267,6 @@ export function withRenderer<P = Record<string, unknown>>(
   };
 }
 
-/**
- * Merge multiple component registries.
- *
- * @param registries - Component registries to merge
- * @returns Merged registry (later registries override earlier ones)
- *
- * @example
- * ```ts
- * const customComponents = mergeComponents(
- *   defaultComponents,
- *   { CustomWidget: myCustomWidget }
- * );
- * ```
- */
 export function mergeComponents(
   ...registries: ReziComponents[]
 ): ReziComponents {

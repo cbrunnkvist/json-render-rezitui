@@ -1,4 +1,10 @@
-import "dotenv/config";
+import * as dotenv from "dotenv";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, "../../../.env") });
+
 import { createReziApp, createStreamingRenderer } from "@cbrunnkvist/json-render-rezitui";
 import type { Spec } from "@json-render/core";
 
@@ -126,13 +132,13 @@ const initialSpec: Spec = {
       ],
     },
     "playground-prompt-input": {
-        type: "Input",
-        props: {
-          id: "playground-prompt-input",
-          placeholder: "Enter your prompt here...",
-          value: { $state: "/prompt" },
-          bindings: { value: "/prompt" },
-        },
+      type: "Input",
+      props: {
+        id: "playground-prompt-input",
+        placeholder: "Enter your prompt here...",
+        value: { $state: "/prompt" },
+        bindings: { value: "/prompt" },
+      },
     },
     "playground-controls": {
       type: "Row",
@@ -226,7 +232,7 @@ async function main() {
 
         abortController = new AbortController();
         ctx.store.update({ isStreaming: true, error: null, rawSpec: "" });
-        
+
         // Reset the streaming renderer for the new response
         streamingRenderer.reset({
           root: "playground-output-placeholder",
@@ -285,26 +291,26 @@ You are an expert in the Rezi TUI framework. Your task is to generate a JSON spe
             const { spec: generatedSpec, isValid } = streamingRenderer.push(chunk);
 
             if (isValid) {
-                const mainSpec = app.getSpec();
-                if (!mainSpec) continue;
+              const mainSpec = app.getSpec();
+              if (!mainSpec) continue;
 
-                const newElements = {
-                    ...mainSpec.elements,
-                    ...generatedSpec.elements,
-                };
-                
-                newElements["playground-output-panel"] = {
-                    ...(newElements["playground-output-panel"] || { type: 'Panel' }),
-                    children: [generatedSpec.root],
-                };
+              const newElements = {
+                ...mainSpec.elements,
+                ...generatedSpec.elements,
+              };
 
-                const newState = { ...mainSpec.state, ...generatedSpec.state };
+              newElements["playground-output-panel"] = {
+                ...(newElements["playground-output-panel"] || { type: 'Panel' }),
+                children: [generatedSpec.root],
+              };
 
-                app.setSpec({
-                    ...mainSpec,
-                    elements: newElements,
-                    state: newState,
-                });
+              const newState = { ...mainSpec.state, ...generatedSpec.state };
+
+              app.setSpec({
+                ...mainSpec,
+                elements: newElements,
+                state: newState,
+              });
             }
           }
         } catch (error: any) {
