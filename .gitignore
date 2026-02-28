@@ -34,8 +34,9 @@ lerna-debug.log*
 pnpm-lock.yaml
 !/pnpm-workspace.yaml
 
-# Sisyphus
+# Sisyphus / Opencode
 .sisyphus/
+.opencode/
 
 # Coverage
 coverage/
