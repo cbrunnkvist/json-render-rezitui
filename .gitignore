@@ -44,5 +44,5 @@ coverage/
 /.vitestcache/
 /test-results/
 
-# Development references - do not ship
-reference/
+# Development references (submodules)
+# reference/ submodules are tracked via git submodule

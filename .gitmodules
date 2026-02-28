@@ -1,0 +1,12 @@
+[submodule "reference/json-render"]
+	path = reference/json-render
+	url = https://github.com/vercel-labs/json-render.git
+	branch = main
+[submodule "reference/Rezi"]
+	path = reference/Rezi
+	url = https://github.com/RtlZeroMemory/Rezi.git
+	branch = main
+[submodule "reference/Zireael"]
+	path = reference/Zireael
+	url = https://github.com/RtlZeroMemory/Zireael.git
+	branch = main
