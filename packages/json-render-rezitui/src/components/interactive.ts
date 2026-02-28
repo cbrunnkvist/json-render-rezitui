@@ -52,7 +52,7 @@ export function resetIdCounter(): void {
  */
 export function Text(ctx: ReziComponentContext<TextProps & { content?: string }>): VNode {
   const { content, bindings, ...restProps } = ctx.props as any;
-  const textContent = content ?? "";
+  const textContent = content !== undefined && content !== null ? String(content) : "";
 
   const mappedProps = mapStyles(restProps);
 

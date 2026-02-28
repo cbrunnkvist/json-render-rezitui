@@ -5,6 +5,7 @@ import {
   type TableProps,
   type VirtualListProps,
   type LogsConsoleProps,
+  type BoxProps,
 } from "@rezi-ui/core";
 import type { ReziComponentContext } from "../types.js";
 import { mapStyles } from "../styles.js";
@@ -43,18 +44,9 @@ export function Page(ctx: ReziComponentContext<PageOptions>): VNode {
  * Panel options for the Panel component.
  * Extends the core PanelOptions with optional children.
  */
-export interface PanelProps {
-  id?: string;
-  key?: string;
+export interface PanelProps extends BoxProps {
   title?: string;
   variant?: "none" | "single" | "double" | "rounded";
-  p?: number;
-  gap?: number;
-  width?: number | string;
-  height?: number | string;
-  border?: string;
-  borderColor?: string;
-  style?: Record<string, unknown>;
 }
 
 /**
@@ -70,35 +62,12 @@ export interface PanelProps {
  * { type: "Panel", props: { variant: "rounded", p: 1 }, children: [...] }
  */
 export function Panel(ctx: ReziComponentContext<PanelProps>): VNode {
-  const { id, key, title, variant, p, gap, width, height, border, borderColor, style } = ctx.props;
-
-  const options: {
-    id?: string;
-    key?: string;
-    title?: string;
-    variant?: PanelProps["variant"];
-    p?: number;
-    gap?: number;
-    width?: number | string;
-    height?: number | string;
-    border?: string;
-    borderColor?: string;
-    style?: Record<string, unknown>;
-  } = {};
-
-  if (id !== undefined) options.id = id;
-  if (key !== undefined) options.key = key;
-  if (title !== undefined) options.title = title;
-  if (variant !== undefined) options.variant = variant;
-  if (p !== undefined) options.p = p;
-  if (gap !== undefined) options.gap = gap;
-  if (width !== undefined) options.width = width;
-  if (height !== undefined) options.height = height;
-  if (border !== undefined) options.border = border;
-  if (borderColor !== undefined) options.borderColor = borderColor;
-  if (style !== undefined) options.style = style;
-
-  return ui.panel(mapStyles(options), ctx.children ?? []);
+  const { title, variant, ...rest } = ctx.props;
+  return ui.box({
+    border: variant ?? "rounded",
+    title,
+    ...mapStyles(rest),
+  }, ctx.children ?? []);
 }
 
 // =============================================================================
