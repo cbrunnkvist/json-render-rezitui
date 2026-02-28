@@ -14,7 +14,7 @@ A specialized renderer that transforms JSON UI specifications (based on `@json-r
 - **Monorepo Structure (pnpm):**
     - `packages/json-render-rezitui`: The main library.
     - `examples/`: Static and agent-driven example applications demonstrating usage.
-    - `reference/`: Development references and local copies of upstream dependencies.
+    - `reference/`: Development references and local copies of upstream dependencies. Specifically, read-only Rezi widget docs and source code are available under `reference/Rezi/`.
 
 ## Architecture
 
