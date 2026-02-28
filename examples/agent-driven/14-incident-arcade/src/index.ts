@@ -265,17 +265,17 @@ async function main() {
         });
       },
       CONFIRMED_ACTION: async (params, ctx) => {
-        const incidentId = ctx.store.getState().selectedIncidentId;
+        const incidentId = ctx.store.getSnapshot().selectedIncidentId;
         // In a real app, you'd perform the action here.
         // For the demo, we'll just update the incident status.
         ctx.store.update(`incidents[id=${incidentId}].status`, "Action Taken");
-        ctx.store.update(`incidents[id=${incidentId}].summary`, `${ctx.store.getState().incidents.find(i => i.id === incidentId).summary}. Last action: ${params.message}`);
+        ctx.store.update(`incidents[id=${incidentId}].summary`, `${ctx.store.getSnapshot().incidents.find((i: any) => i.id === incidentId).summary}. Last action: ${params.message}`);
         ctx.ui.remove("confirm-restart-dialog");
         ctx.ui.remove("confirm-purge-dialog");
       },
       // AI Generation Handler
       generate: async (_params, ctx) => {
-        const state = ctx.store.getState();
+        const state = ctx.store.getSnapshot() as any;
         const incident = state.incidents.find(i => i.id === state.selectedIncidentId);
         if (!incident) return;
 

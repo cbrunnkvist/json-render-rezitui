@@ -107,7 +107,7 @@ const initialSpec: Spec = {
   elements: {
     "playground-main": {
       type: "Column",
-      props: { gap: 1, padding: 1, border: "single" },
+      props: { gap: 1, padding: 1, border: "single", width: "100%", height: "100%" },
       children: [
         "playground-header",
         "playground-prompt-area",
@@ -142,11 +142,12 @@ const initialSpec: Spec = {
     },
     "playground-controls": {
       type: "Row",
-      props: { gap: 2, paddingX: 1 },
+      props: { gap: 2, paddingX: 1, alignItems: "center" },
       children: [
         "playground-generate-btn",
         "playground-regenerate-btn",
         "playground-cancel-btn",
+        "playground-status",
       ],
     },
     "playground-generate-btn": {
@@ -176,23 +177,30 @@ const initialSpec: Spec = {
       },
       on: { press: { action: "cancel" } },
     },
+    "playground-status": {
+      type: "Text",
+      props: {
+        content: { $cond: { $state: "/isStreaming" }, $then: "⏳ Generating Model Specification...", $else: "✨ Ready" },
+        color: { $cond: { $state: "/isStreaming" }, $then: "yellow", $else: "gray" },
+        italic: true,
+      }
+    },
     "playground-output-container": {
       type: "Row",
-      props: { gap: 1 },
+      props: { gap: 1, width: "100%", flex: 1, align: "stretch" },
       children: ["playground-output-panel", "playground-inspector-panel"],
     },
     "playground-output-panel": {
       type: "Panel",
-      props: { title: "Rendered Output", width: "50%" },
+      props: { title: "Rendered Output", width: "50%", flex: 1 },
       children: ["playground-output-slot"],
     },
     "playground-output-slot": {
-      type: "Box",
+      type: "Column",
       props: {
-        padding: 1,
-        border: "single",
-        borderColor: "gray",
-        minHeight: 5,
+        paddingX: 1,
+        flex: 1,
+        minHeight: 12,
       },
       children: ["playground-output-placeholder"],
     },
@@ -202,7 +210,7 @@ const initialSpec: Spec = {
     },
     "playground-inspector-panel": {
       type: "Panel",
-      props: { title: "Spec Inspector", width: "50%" },
+      props: { title: "Spec Inspector", width: "50%", flex: 1 },
       children: ["playground-spec-display"],
     },
     "playground-spec-display": {
@@ -210,6 +218,7 @@ const initialSpec: Spec = {
       props: {
         content: { $state: "/rawSpec" },
         wrap: "word",
+        minHeight: 12,
       },
     },
   },
@@ -225,26 +234,28 @@ async function main() {
   const app = createReziApp({
     initialState: initialSpec.state || {},
     spec: initialSpec,
+    config: { fullscreen: true },
     actionHandlers: {
       generate: async (_params, ctx) => {
-        const prompt = ctx.store.getState().prompt as string;
-        if (!prompt.trim()) return;
+        try {
+          const prompt = ctx.store.getSnapshot().prompt as string;
+          if (!prompt.trim()) return;
 
-        abortController = new AbortController();
-        ctx.store.update({ isStreaming: true, error: null, rawSpec: "" });
+          abortController = new AbortController();
+          ctx.store.update({ isStreaming: true, error: null, rawSpec: "" });
 
-        // Reset the streaming renderer for the new response
-        streamingRenderer.reset({
-          root: "playground-output-placeholder",
-          elements: {
-            "playground-output-placeholder": {
-              type: "Text",
-              props: { content: "AI output will be rendered here." },
-            },
-          }
-        });
+          // Reset the streaming renderer for the new response
+          streamingRenderer.reset({
+            root: "playground-output-placeholder",
+            elements: {
+              "playground-output-placeholder": {
+                type: "Text",
+                props: { content: "AI output will be rendered here." },
+              },
+            }
+          });
 
-        const finalPrompt = `
+          const finalPrompt = `
 You are an expert in the Rezi TUI framework. Your task is to generate a JSON specification for a terminal UI based on a user's prompt.
 
 **Constraints:**
@@ -278,48 +289,51 @@ You are an expert in the Rezi TUI framework. Your task is to generate a JSON spe
   }
 }
 `;
-        let specString = "";
-        try {
-          for await (const chunk of getAiStream(
-            finalPrompt,
-            abortController.signal,
-          )) {
-            specString += chunk;
-            ctx.store.update({ rawSpec: specString });
+          let specString = "";
+          try {
+            for await (const chunk of getAiStream(
+              finalPrompt,
+              abortController.signal,
+            )) {
+              specString += chunk;
+              ctx.store.update({ rawSpec: specString });
 
-            // Push the chunk to the streaming renderer
-            const { spec: generatedSpec, isValid } = streamingRenderer.push(chunk);
+              // Push the chunk to the streaming renderer
+              const { spec: generatedSpec, isValid } = streamingRenderer.push(chunk);
 
-            if (isValid) {
-              const mainSpec = app.getSpec();
-              if (!mainSpec) continue;
+              if (isValid) {
+                const mainSpec = app.getSpec();
+                if (!mainSpec) continue;
 
-              const newElements = {
-                ...mainSpec.elements,
-                ...generatedSpec.elements,
-              };
+                const newElements = {
+                  ...mainSpec.elements,
+                  ...generatedSpec.elements,
+                };
 
-              newElements["playground-output-panel"] = {
-                ...(newElements["playground-output-panel"] || { type: 'Panel' }),
-                children: [generatedSpec.root],
-              };
+                newElements["playground-output-panel"] = {
+                  ...(newElements["playground-output-panel"] || { type: 'Panel' }),
+                  children: [generatedSpec.root],
+                };
 
-              const newState = { ...mainSpec.state, ...generatedSpec.state };
+                const newState = { ...mainSpec.state, ...generatedSpec.state };
 
-              app.setSpec({
-                ...mainSpec,
-                elements: newElements,
-                state: newState,
-              });
+                app.setSpec({
+                  ...mainSpec,
+                  elements: newElements,
+                  state: newState,
+                });
+              }
             }
+          } catch (error: any) {
+            if (error.name !== "AbortError") {
+              const err = error as Error;
+              ctx.store.update({ error: err.message });
+            }
+          } finally {
+            ctx.store.update({ isStreaming: false });
           }
-        } catch (error: any) {
-          if (error.name !== "AbortError") {
-            const err = error as Error;
-            ctx.store.update({ error: err.message });
-          }
-        } finally {
-          ctx.store.update({ isStreaming: false });
+        } catch (fatalObj) {
+          console.error("FATAL GENERATE:", (fatalObj as any).stack || fatalObj);
         }
       },
       cancel: async () => {
@@ -327,6 +341,7 @@ You are an expert in the Rezi TUI framework. Your task is to generate a JSON spe
       },
     },
   });
+
 
   await app.run();
 }
